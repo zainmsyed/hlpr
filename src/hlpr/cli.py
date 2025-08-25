@@ -6,6 +6,9 @@ from rich.console import Console
 from rich.table import Table
 
 from hlpr.core.settings import get_settings
+from hlpr.db.base import get_session_factory, init_models
+from hlpr.db.repositories import DocumentRepository, PipelineRunRepository
+from hlpr.services.pipelines import PipelineService
 
 app_cli = typer.Typer(help="hlpr command line interface")
 console = Console()
@@ -37,6 +40,24 @@ def demo_process(text: str = "Sample project meeting transcript") -> None:
     # Placeholder logic
     console.print("[cyan]Result:[/cyan] (stub) summarization would appear here.")
 
+
+@app_cli.command("summarize")
+def summarize(document_id: int) -> None:  # pragma: no cover - IO heavy
+    """Summarize a document by its ID using the summarization pipeline."""
+    import asyncio
+
+    async def _run() -> None:
+        # Ensure tables exist (safe to call multiple times)
+        await init_models(drop=False)
+        session_factory = get_session_factory()
+        async with session_factory() as session:
+            docs = DocumentRepository(session)
+            runs = PipelineRunRepository(session)
+            service = PipelineService(docs, runs)
+            result = await service.summarize_document(document_id)
+            console.print(result)
+
+    asyncio.run(_run())
 
 if __name__ == "__main__":  # pragma: no cover
     app_cli()

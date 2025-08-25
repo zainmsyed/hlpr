@@ -6,11 +6,13 @@ Minimal scaffolding for the hlpr Project Management Assistant (FastAPI + DSPy) w
 - FastAPI app factory (`hlpr.create_app`)
 - Example router at `/example/`
 - Health endpoint at `/health`
-- Typer + Rich CLI (`hlpr` command) with health info and run-server
+- Typer + Rich CLI (`hlpr` command) with health, run-server, summarize
 - Settings management via `pydantic-settings`
 - Basic error handling + custom `AppError`
 - Async test setup using httpx ASGITransport
 - Ruff linting configured
+- Async SQLAlchemy setup (SQLite dev default, Postgres + pgvector ready)
+- DSPy summarization pipeline skeleton (repository + service orchestration)
 
 ## Development
 
@@ -35,6 +37,7 @@ uv run hlpr run-server
 ```bash
 uv run hlpr health
 uv run hlpr demo-process --text "Sample meeting notes"
+uv run hlpr summarize --document-id 1
 ```
 
 ### Run tests
@@ -81,7 +84,18 @@ Environment variables (prefixed with `HLPR_`) override defaults, e.g.:
 ```bash
 export HLPR_ENVIRONMENT=prod
 export HLPR_DEBUG=false
+export HLPR_DATABASE_URL="postgres+asyncpg://user:pass@localhost:5432/hlpr"
+export HLPR_SQL_ECHO=true
 ```
+
+By default an on-disk SQLite database (`sqlite+aiosqlite:///./hlpr.db`) is used for local development.
+
+### Enabling pgvector in Postgres
+Run inside your database (once):
+```sql
+CREATE EXTENSION IF NOT EXISTS vector;
+```
+Future migrations will add embedding vector columns.
 
 ## Project layout
 ```
@@ -100,12 +114,12 @@ src/
 ```
 
 ## Next steps (suggested)
-- Database integration (SQLAlchemy + async engine)
-- Vector store for RAG
-- Celery task queue wiring
+- Add embedding & vector index table (pgvector) + retrieval interface
+- Migrations tooling (Alembic) & seed scripts
+- Celery task queue wiring for async pipeline runs
 - Authentication & RBAC
-- Extended DSPy pipelines
-- Observability (OpenTelemetry)
+- Expand DSPy pipelines (action items, classification) with evaluation
+- Observability (OpenTelemetry + structured logs)
 
 ---
 Happy building!
