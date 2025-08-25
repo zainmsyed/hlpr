@@ -1,0 +1,32 @@
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+
+# Virtual environments
+.venv
+documents/
+env/
+venv/
+ENV/
+env
+
+# Testing and coverage
+.pytest_cache/
+.coverage
+coverage.*
+htmlcov/
+
+# Type checking cache
+.mypy_cache/
+
+# Python package metadata
+pip-wheel-metadata/
+__pypackages__/
+
+# Artifact and log files
+*.log
+pip-selfcheck.json
