@@ -1,3 +1,5 @@
+.env 
+
 # Python-generated files
 __pycache__/
 *.py[oc]
@@ -12,7 +14,6 @@ documents/
 env/
 venv/
 ENV/
-env
 
 # Testing and coverage
 .pytest_cache/

@@ -9,15 +9,47 @@ dependencies = [
     "fastapi>=0.116.1",
     "httpx>=0.28.1",
     "pydantic>=2.11.7",
+    "pydantic-settings>=2.10.1",
     "rich>=14.1.0",
     "typer>=0.16.1",
     "uvicorn[standard]>=0.35.0",
 ]
 
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
 [dependency-groups]
 dev = [
     "mypy>=1.17.1",
-    "pydantic-settings>=2.10.1",
     "pytest>=8.4.1",
     "pytest-asyncio>=1.1.0",
 ]
+
+[tool.ruff]
+line-length = 100
+target-version = "py313"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP"]
+ignore = ["E501"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+skip-magic-trailing-comma = false
+line-ending = "lf"
+
+[tool.mypy]
+python_version = "3.13"
+strict = true
+warn_unused_ignores = true
+warn_return_any = true
+disallow_untyped_defs = true
+ignore_missing_imports = true  # Temporarily for third-party libs without stubs (e.g., dspy)
+exclude = ["tests/.*"]
+
+[project.scripts]
+hlpr = "hlpr.cli:app_cli"
