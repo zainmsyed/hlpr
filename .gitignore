@@ -32,3 +32,32 @@ __pypackages__/
 # Artifact and log files
 *.log
 pip-selfcheck.json
+
+# UV lock artifacts (if generated)
+uv.lock
+
+# Jupyter
+*.ipynb_checkpoints/
+
+# Editors / IDE
+.vscode/
+.idea/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Cache
+.cache/
+
+# Migrations (if generated later) - uncomment when using Alembic
+# alembic.ini
+# migrations/
+
+# Local data / temp
+tmp/
+*.tmp
+
+# Coverage XML / reports
+coverage.xml
+test-results/
