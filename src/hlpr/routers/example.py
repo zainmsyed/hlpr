@@ -1,6 +1,4 @@
-"""
-Example router to validate project structure.
-"""
+"""Example router migrated to new hlpr package."""
 from fastapi import APIRouter
 
 router = APIRouter()

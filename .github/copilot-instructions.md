@@ -3,16 +3,16 @@
 - Goal: Keep code small, focused, and modular for maintainability and testability.
 
 - Recommended project structure:
-  - `app/main.py`: Initialize FastAPI instance and include routers.
-  - `app/routers/`: One router per resource or feature (e.g., `users.py`, `items.py`).
-  - `app/schemas/`: Pydantic models for requests and responses.
-  - `app/services/`: Business logic and data processing using dspy modules.
-  - `app/core/`: Shared configuration, dependencies, and utilities.
-  - `dspy/`: Encapsulate data pipelines, transformations, and processing logic independent of API.
-  - `app/tasks/`: Celery task definitions for background processing (batch jobs, heavy pipelines).
-  - `app/ws/`: WebSocket endpoints for live updates and real-time features.
-  - `app/db/`: Database session management, repository patterns, and vector DB integration.
-  - `app/cli/` or `app/cli.py`: Typer-based CLI entrypoint(s) using Rich for styled output.
+  - `src/hlpr/main.py`: FastAPI entrypoint + app factory.
+  - `src/hlpr/routers/`: One router per resource or feature (e.g., `projects.py`, `documents.py`).
+  - `src/hlpr/schemas/`: Pydantic models for requests and responses.
+  - `src/hlpr/services/`: Business logic and orchestration using DSPy modules.
+  - `src/hlpr/core/`: Configuration, settings, logging, security utilities.
+  - `src/hlpr/tasks/`: Celery (or background) task definitions.
+  - `src/hlpr/ws/`: WebSocket handlers for real-time features.
+  - `src/hlpr/db/`: Database session management, repositories, vector index integration.
+  - `src/hlpr/cli/` or `src/hlpr/cli.py`: Typer-based CLI entrypoint(s) using Rich.
+  - `dspy/`: DSPy pipelines & optimization modules (kept framework-agnostic where possible).
 
 - Best practices:
   - Single Responsibility: each file holds one concern (router, schema, service, or pipeline).
@@ -20,8 +20,8 @@
   - Thin routers: delegate processing and validation to `services` and `schemas` layers.
   - Pydantic models: use for request validation and response serialization to ensure type safety.
   - Isolate heavy data processing in `dspy` modules; the API layer should only orchestrate calls.
-  - Async tasks: offload heavy workloads to Celery tasks in `app/tasks`, keeping the API layer thin.
-  - Realtime: define WebSocket handlers separately in `app/ws` to manage live updates.
+  - Async tasks: offload heavy workloads to Celery tasks in `src/hlpr/tasks`, keeping the API layer thin.
+  - Realtime: define WebSocket handlers separately in `src/hlpr/ws` to manage live updates.
   - File size: aim for under ~200 lines per file; split larger modules by functionality.
   - Environment management: use `uv` to manage dependencies and virtual environments.
   - Minimal dependencies: keep external packages to the bare minimum needed to reduce complexity and potential vulnerabilities.
