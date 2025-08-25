@@ -1,13 +1,7 @@
 """Summarization pipeline skeleton using a placeholder summarizer implementation."""
 from __future__ import annotations
 
-from typing import Any
-
-dspy: Any
-try:  # optional dspy import (not strictly required for placeholder)
-    import dspy
-except Exception:  # pragma: no cover
-    dspy = None
+from typing import Any  # Keep Any for potential annotations
 
 from hlpr.pipelines.interfaces import (
     DocumentRepositoryProtocol,
@@ -19,13 +13,8 @@ class SummarizeModule:
     """Simple heuristic summarizer (optionally leveraging dspy if available)."""
 
     def __init__(self) -> None:
-        # Store optional underlying dspy module (if library available)
-        self._dspy_module: Any | None = None
-        if dspy is not None and hasattr(dspy, "Module"):
-            try:
-                self._dspy_module = dspy.Module()  # best-effort optional construction
-            except Exception:  # pragma: no cover
-                self._dspy_module = None
+        # Simplified initializer without external dependencies
+        pass
 
     def forward(self, text: str) -> str:
         # Trivial placeholder summary heuristic
