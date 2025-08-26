@@ -60,8 +60,60 @@ def summarize(document_id: int) -> None:  # pragma: no cover - IO heavy
 
     asyncio.run(_run())
 
-if __name__ == "__main__":  # pragma: no cover
-    app_cli()
+
+@app_cli.command("summarize-meeting")
+def summarize_meeting(
+    meeting_id: int,
+    model: str = typer.Option("ollama/gemma3", help="DSPy model identifier (e.g., ollama/gemma3)"),
+    output: str | None = typer.Option(None, "-o", "--output", help="Output Markdown file path"),
+) -> None:
+    """Invoke DSPy MeetingProgram with Ollama/Gemma3 and write Markdown minutes."""
+    import asyncio
+
+    async def _run():
+        await init_models(drop=False)
+        session_factory = get_session_factory()
+        async with session_factory() as session:
+            from hlpr.db.repositories import MeetingRepository
+            # Load meeting
+            meeting = await MeetingRepository(session).get(meeting_id)
+            if meeting is None:
+                console.print(f"[red]Meeting {meeting_id} not found[/red]")
+                return
+            transcript = meeting.transcript
+            # Configure DSPy for Ollama/Gemma3
+            try:
+                import dspy
+                name = model.split("/")[-1]
+                dspy.configure(lm=dspy.LM(model=f"ollama/{name}", api_base="http://localhost:11434"))
+            except Exception as e:
+                console.print(f"[yellow]Warning: failed to configure DSPy model {model}: {e}[/]")
+            # Run MeetingProgram
+            try:
+                from hlpr.dspy.optimizer import MeetingProgram
+                prog = MeetingProgram()
+                res = prog(transcript=transcript)
+            except Exception as e:
+                console.print(f"[red]Error invoking MeetingProgram: {e}[/]")
+                return
+            summary = res.get("summary", "")
+            items = res.get("action_items", [])
+            console.print("[bold green]Summary:[/bold green]\n" + summary)
+            if items:
+                console.print("\n[bold cyan]Action Items:[/bold cyan]")
+                for it in items:
+                    console.print(f" - {it}")
+            # Write Markdown file
+            from pathlib import Path
+            md = [f"# Meeting {meeting_id} Minutes", "", "## Summary", summary, "", "## Action Items"]
+            md += [f"- {it}" for it in items] if items else ["- None"]
+            path = Path(output) if output else Path(f"meeting_{meeting_id}_minutes.md")
+            try:
+                path.write_text("\n".join(md), encoding="utf-8")
+                console.print(f"[bold green]Wrote minutes to {path}[/bold green]")
+            except Exception as e:
+                console.print(f"[red]Error writing file: {e}[/]")
+    asyncio.run(_run())
 
 
 @app_cli.command("optimize-meeting")
@@ -84,3 +136,7 @@ def optimize_meeting(
     )
     result = optimize(cfg)
     console.print(f"[green]Optimization complete[/green]: {result}")
+
+
+if __name__ == "__main__":  # pragma: no cover
+    app_cli()
