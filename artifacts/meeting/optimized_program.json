@@ -1,0 +1,8 @@
+{
+  "iteration": 0,
+  "avg_summary_f1": 0.45062262157492716,
+  "avg_action_f1": 0.3306666666666666,
+  "composite": 0.3906446441207969,
+  "model": "ollama/gemma3",
+  "program_repr": "summarizer.predict = Predict(StringSignature(transcript -> reasoning, summary\n    instructions='Summarize the meeting transcript in 3 concise sentences focusing on key outcomes.\\n\\ntranscript -> summary'\n    transcript = Field(annotation=str required=True json_schema_extra={'__dspy_field_type': 'input', 'prefix': 'Transcript:', 'desc': '${transcript}'})\n    reasoning = Field(annotation=str required=True json_schema_extra={'prefix': \"Reasoning: Let's think step by step in order to\", 'desc': '${reasoning}', '__dspy_field_type': 'output'})\n    summary = Field(annotation=str required=True json_schema_extra={'__dspy_field_type': 'output', 'prefix': 'Summary:', 'desc': '${summary}'})\n))\naction_items.predict = Predict(StringSignature(transcript -> reasoning, action_items\n    instructions='Extract concrete action items; each should be a short imperative or assignment.\\n\\ntranscript -> action_items'\n    transcript = Field(annotation=str required=True json_schema_extra={'__dspy_field_type': 'input', 'prefix': 'Transcript:', 'desc': '${transcript}'})\n    reasoning = Field(annotation=str required=True json_schema_extra={'prefix': \"Reasoning: Let's think step by step in order to\", 'desc': '${reasoning}', '__dspy_field_type': 'output'})\n    action_items = Field(annotation=list[str] required=True json_schema_extra={'__dspy_field_type': 'output', 'prefix': 'Action Items:', 'desc': '${action_items}'})\n))"
+}

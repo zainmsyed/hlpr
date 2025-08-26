@@ -8,6 +8,7 @@ from rich.table import Table
 from hlpr.core.settings import get_settings
 from hlpr.db.base import get_session_factory, init_models
 from hlpr.db.repositories import DocumentRepository, PipelineRunRepository
+from hlpr.dspy.optimizer import OptimizerConfig, optimize
 from hlpr.services.pipelines import PipelineService
 
 app_cli = typer.Typer(help="hlpr command line interface")
@@ -61,3 +62,21 @@ def summarize(document_id: int) -> None:  # pragma: no cover - IO heavy
 
 if __name__ == "__main__":  # pragma: no cover
     app_cli()
+
+
+@app_cli.command("optimize-meeting")
+def optimize_meeting(
+    data_path: str = "documents/training-data/meetings.txt",
+    iters: int = 2,
+    include_unverified: bool = typer.Option(False, help="Include unverified / noisy examples"),
+    model: str | None = typer.Option(None, help="Model identifier (e.g., ollama/llama3)"),
+):  # pragma: no cover - IO heavy
+    """Run lightweight DSPy optimization over meeting dataset and store artifact."""
+    cfg = OptimizerConfig(
+        data_path=data_path,
+        iters=iters,
+        include_unverified=include_unverified,
+        model=model,
+    )
+    result = optimize(cfg)
+    console.print(f"[green]Optimization complete[/green]: {result}")

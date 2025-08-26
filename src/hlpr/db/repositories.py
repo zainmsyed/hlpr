@@ -8,7 +8,7 @@ from typing import Any
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from .models import Document, PipelineRun
+from .models import Document, Meeting, PipelineRun
 
 
 class DocumentRepository:
@@ -52,3 +52,30 @@ class PipelineRunRepository:
     async def get(self, run_id: int) -> PipelineRun | None:
         result = await self.session.execute(select(PipelineRun).where(PipelineRun.id == run_id))
         return result.scalar_one_or_none()
+
+
+class MeetingRepository:
+    def __init__(self, session: AsyncSession):
+        self.session = session
+
+    async def get(self, meeting_id: int) -> Meeting | None:
+        result = await self.session.execute(select(Meeting).where(Meeting.id == meeting_id))
+        return result.scalar_one_or_none()
+
+    async def add(
+        self,
+        project_id: int,
+        title: str,
+        transcript: str,
+        participants: list[str] | None = None,
+    ) -> Meeting:
+        participants_csv = ",".join(participants) if participants else None
+        meeting = Meeting(
+            project_id=project_id,
+            title=title,
+            transcript=transcript,
+            participants=participants_csv,
+        )
+        self.session.add(meeting)
+        await self.session.flush()
+        return meeting

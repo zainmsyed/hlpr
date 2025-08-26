@@ -24,5 +24,18 @@ class PipelineRunRepositoryProtocol(Protocol):
     async def complete(self, run_id: int, output: dict[str, Any]) -> None: ...
 
 
+class MeetingRepositoryProtocol(Protocol):
+    """Protocol for meeting persistence access (Phase 1)."""
+
+    async def get(self, meeting_id: int) -> Any | None: ...  # returns MeetingDTO eventually
+    async def add(
+        self,
+        project_id: int,
+        title: str,
+        transcript: str,
+        participants: list[str] | None = None,
+    ) -> Any: ...
+
+
 class RetrievalInterface(Protocol):
     async def retrieve(self, project_id: int, query: str, k: int = 5) -> Sequence[DocumentDTO]: ...

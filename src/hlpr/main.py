@@ -5,6 +5,7 @@ from fastapi.exceptions import RequestValidationError
 from hlpr.core.errors import AppError, app_error_handler, validation_error_handler
 from hlpr.routers import example
 from hlpr.routers import health as health_router
+from hlpr.routers import meetings as meetings_router
 
 
 def create_app() -> FastAPI:
@@ -15,6 +16,7 @@ def create_app() -> FastAPI:
     )
     app.include_router(example.router, prefix="/example", tags=["example"])
     app.include_router(health_router.router)
+    app.include_router(meetings_router.router)
 
     # Error handlers
     app.add_exception_handler(AppError, app_error_handler)
