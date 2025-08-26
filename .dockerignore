@@ -1,0 +1,21 @@
+# Exclude Python cache
+__pycache__/
+*.py[cod]
+
+# Exclude virtual environments and env files
+.venv/
+env/
+
+# Exclude local database file
+hlpr.db
+
+# Exclude DSPy artifacts
+artifacts/
+
+# Exclude test and CI files
+.coverage
+.pytest_cache/
+
+# Logs and temp files
+*.log
+*~

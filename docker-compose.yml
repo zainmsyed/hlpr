@@ -1,0 +1,11 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      - PYTHONUNBUFFERED=1
+    # Rely on image CMD (uv run hlpr run-server) instead of direct uvicorn
+    # Remove custom command to use Dockerfile default
