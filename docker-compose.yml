@@ -1,11 +1,53 @@
 services:
+  # PostgreSQL service for application backend
+  db:
+    build:
+      context: ./docker/postgres
+      dockerfile: Dockerfile
+    environment:
+      POSTGRES_USER: hlpr
+      POSTGRES_PASSWORD: hlprpass
+      POSTGRES_DB: hlpr
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U hlpr"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # Redis service for caching and sessions
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
   app:
     build:
       context: .
       dockerfile: Dockerfile
     ports:
       - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     environment:
       - PYTHONUNBUFFERED=1
+      - HLPR_DATABASE_URL=postgresql+asyncpg://hlpr:hlprpass@db:5432/hlpr
+      - HLPR_REDIS_URL=redis://redis:6379
     # Rely on image CMD (uv run hlpr run-server) instead of direct uvicorn
     # Remove custom command to use Dockerfile default
+
+# Define named volumes
+volumes:
+  db_data: {}
+  redis_data: {}

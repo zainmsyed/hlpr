@@ -138,5 +138,21 @@ def optimize_meeting(
     console.print(f"[green]Optimization complete[/green]: {result}")
 
 
+@app_cli.command("db-init")
+def db_init(
+    drop: bool = typer.Option(False, "--drop", help="Drop existing tables before initializing"),
+) -> None:
+    """Initialize database tables."""
+    import asyncio
+    from hlpr.db.base import init_models
+
+    async def _run():
+        # Ensure tables exist (optionally drop)
+        await init_models(drop=drop)
+        console.print("[green]Database initialized[/green]")
+
+    asyncio.run(_run())
+
+
 if __name__ == "__main__":  # pragma: no cover
     app_cli()

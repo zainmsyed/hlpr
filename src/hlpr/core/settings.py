@@ -10,7 +10,7 @@ class Settings(BaseSettings):
     debug: bool = Field(default=True, description="Enable debug features")
     api_prefix: str = "/api"
     database_url: str = Field(
-        default="sqlite+aiosqlite:///./hlpr.db",
+        default="postgresql+asyncpg://hlpr:hlprpass@db:5432/hlpr",
         description="SQLAlchemy database URL (async). Use postgres+asyncpg://user:pass@host:5432/db",
     )
     sql_echo: bool = Field(default=False, description="Enable SQLAlchemy echo for debugging")

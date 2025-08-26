@@ -13,14 +13,14 @@ RUN apt-get update \
 # Copy dependency definitions
 # Copy project metadata and README
 COPY pyproject.toml uv.lock README.md ./
-# Copy source code for installation
+# Copy package source for installation
 COPY src ./src
-
-# Install the package (and its dependencies) so `hlpr` CLI & `uvicorn` are available
-RUN pip install .
 
 # Copy application source
 COPY . .
+
+# Re-install the package so new CLI commands (e.g., db-init) are included
+RUN pip install .
 
 # Expose FastAPI port
 EXPOSE 8000

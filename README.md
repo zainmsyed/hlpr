@@ -40,6 +40,16 @@ Use uv (preferred):
 uv sync
 ```
 
+### Docker
+Build and start the application with Docker Compose:
+
+```bash
+docker compose build
+docker compose up -d
+```
+
+Then open http://localhost:8000 or http://localhost:8000/docs in your browser.
+
 ### Run the API (dev)
 ```bash
 uv run uvicorn hlpr.main:app --reload
