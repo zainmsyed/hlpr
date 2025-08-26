@@ -44,6 +44,8 @@ services:
       - PYTHONUNBUFFERED=1
       - HLPR_DATABASE_URL=postgresql+asyncpg://hlpr:hlprpass@db:5432/hlpr
       - HLPR_REDIS_URL=redis://redis:6379
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     # Rely on image CMD (uv run hlpr run-server) instead of direct uvicorn
     # Remove custom command to use Dockerfile default
 
