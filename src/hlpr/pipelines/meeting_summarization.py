@@ -1,6 +1,22 @@
 """Meeting summarization & extraction pipeline.
 
-Includes heuristic extractor plus optional DSPy optimized program artifact fallback.
+Includes heuristic extractor plus optional DSPy opti        try:  # pragma: no cover - environment dependent
+            import dspy
+
+            from hlpr.dspy.signatures import ExtractActionItems, MeetingSummary
+
+            class _Prog(dspy.Module):  # type: ignore[misc]
+                def __init__(self) -> None:
+                    super().__init__()
+                    self.summarizer = dspy.ChainOfThought(MeetingSummary)
+                    self.action_items = dspy.ChainOfThought(ExtractActionItems)
+
+                def forward(self, transcript: str) -> dict[str, Any]:  # type: ignore[override]
+                    s = self.summarizer(transcript=transcript).summary
+                    a = self.action_items(transcript=transcript).action_items
+                    return {"summary": s, "action_items": a}
+
+            return _Prog()ifact fallback.
 """
 from __future__ import annotations
 
@@ -91,24 +107,25 @@ class MeetingSummarizationPipeline:
         path = Path("artifacts/meeting/optimized_program.json")
         if path.exists():  # pragma: no branch
             try:
-                return json.loads(path.read_text(encoding="utf-8"))
+                artifact: dict[str, Any] = json.loads(path.read_text(encoding="utf-8"))
+                return artifact
             except Exception:  # pragma: no cover
                 return None
         return None
 
-    def _init_dspy_program(self):  # lazy import to avoid hard dependency if unused
+    def _init_dspy_program(self) -> Any | None:  # lazy import to avoid hard dependency if unused
         if not self._optimized_artifact:
             return None
         try:  # pragma: no cover - environment dependent
-            import dspy  # type: ignore
+            import dspy
 
             from hlpr.dspy.signatures import ExtractActionItems, MeetingSummary
 
             class _Prog(dspy.Module):  # type: ignore[misc]
-                def __init__(self):
+                def __init__(self) -> None:
                     super().__init__()
-                    self.summarizer = dspy.ChainOfThought(MeetingSummary)  # type: ignore[attr-defined]
-                    self.action_items = dspy.ChainOfThought(ExtractActionItems)  # type: ignore[attr-defined]
+                    self.summarizer = dspy.ChainOfThought(MeetingSummary)
+                    self.action_items = dspy.ChainOfThought(ExtractActionItems)
 
                 def forward(self, transcript: str) -> dict[str, Any]:  # type: ignore[override]
                     s = self.summarizer(transcript=transcript).summary
@@ -124,7 +141,7 @@ class MeetingSummarizationPipeline:
         meeting = await self.meetings.get(meeting_id)
         if meeting is None:
             raise ValueError("Meeting not found")
-        transcript: str = meeting.transcript  # type: ignore[attr-defined]
+        transcript: str = meeting.transcript
         if self._dspy_program is not None:
             try:
                 dspy_out = self._dspy_program(transcript=transcript)

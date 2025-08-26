@@ -66,11 +66,15 @@ if __name__ == "__main__":  # pragma: no cover
 
 @app_cli.command("optimize-meeting")
 def optimize_meeting(
-    data_path: str = "documents/training-data/meetings.txt",
-    iters: int = 2,
-    include_unverified: bool = typer.Option(False, help="Include unverified / noisy examples"),
+    data_path: str = typer.Option(
+        "documents/training-data/meetings.txt", help="Path to meeting dataset (JSONL)"
+    ),
+    iters: int = typer.Option(2, help="Number of optimization iterations"),
+    include_unverified: bool = typer.Option(
+        False, help="Include unverified / noisy examples"
+    ),
     model: str | None = typer.Option(None, help="Model identifier (e.g., ollama/llama3)"),
-):  # pragma: no cover - IO heavy
+) -> None:  # pragma: no cover - IO heavy
     """Run lightweight DSPy optimization over meeting dataset and store artifact."""
     cfg = OptimizerConfig(
         data_path=data_path,

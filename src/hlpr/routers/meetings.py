@@ -5,9 +5,10 @@ from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from hlpr.db.dependencies import get_session
-from hlpr.db.repositories import MeetingRepository, PipelineRunRepository
+from hlpr.db.repositories import MeetingRepository
 from hlpr.services.pipelines import PipelineService
 
 router = APIRouter(prefix="/meetings", tags=["meetings"])
@@ -28,7 +29,7 @@ class MeetingOut(BaseModel):
     participants: list[str] | None = None
 
     @classmethod
-    def from_orm_obj(cls, meeting: Any) -> MeetingOut:  # type: ignore[name-defined]
+    def from_orm_obj(cls, meeting: Any) -> MeetingOut:
         participants = meeting.participants.split(",") if meeting.participants else None
         return cls(
             id=meeting.id,
@@ -39,21 +40,31 @@ class MeetingOut(BaseModel):
         )
 
 
-@router.post("", response_model=MeetingOut)
-async def create_meeting(payload: MeetingCreate, session=Depends(get_session)):  # noqa: B008
+@router.post("/")
+async def create_meeting(
+    meeting: MeetingCreate, session: AsyncSession = Depends(get_session)  # noqa: B008
+) -> dict[str, Any]:
     repo = MeetingRepository(session)
-    meeting = await repo.add(
-        project_id=payload.project_id,
-        title=payload.title,
-        transcript=payload.transcript,
-        participants=payload.participants,
+    meeting_record = await repo.create(
+        project_id=meeting.project_id,
+        title=meeting.title,
+        transcript=meeting.transcript,
+        participants=meeting.participants,
     )
     await session.commit()
-    return MeetingOut.from_orm_obj(meeting)
+    return {
+        "id": meeting_record.id,
+        "title": meeting_record.title,
+        "participants": meeting_record.participants,
+        "transcript": meeting_record.transcript,
+        "created_at": meeting_record.created_at.isoformat() if meeting_record.created_at else None,
+    }
 
 
 @router.get("/{meeting_id}", response_model=MeetingOut)
-async def get_meeting(meeting_id: int, session=Depends(get_session)):  # noqa: B008
+async def get_meeting(
+    meeting_id: int, session: AsyncSession = Depends(get_session)  # noqa: B008
+) -> MeetingOut:
     repo = MeetingRepository(session)
     meeting = await repo.get(meeting_id)
     if meeting is None:
@@ -62,12 +73,13 @@ async def get_meeting(meeting_id: int, session=Depends(get_session)):  # noqa: B
 
 
 @router.post("/{meeting_id}/summarize")
-async def summarize_meeting(meeting_id: int, session=Depends(get_session)):  # noqa: B008
+async def summarize_meeting(
+    meeting_id: int, session: AsyncSession = Depends(get_session)  # noqa: B008
+) -> dict[str, Any]:
     meeting_repo = MeetingRepository(session)
-    runs_repo = PipelineRunRepository(session)
-    service = PipelineService(docs_repo=None, runs_repo=runs_repo)  # type: ignore[arg-type]
+    service = PipelineService(session)
     try:
-        output = await service.summarize_meeting(meeting_repo, meeting_id)
+        output: dict[str, Any] = await service.summarize_meeting(meeting_repo, meeting_id)
     except ValueError as err:  # B904: explicit chaining
         raise HTTPException(status_code=404, detail="Meeting not found") from err
     await session.commit()

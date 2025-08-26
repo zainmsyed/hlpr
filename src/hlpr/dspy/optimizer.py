@@ -5,7 +5,6 @@ This is a lightweight loop that evaluates simple signatures; later can be replac
 from __future__ import annotations
 
 import json
-import os
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -51,12 +50,12 @@ def _init_model(model: str | None) -> None:
 
 
 class MeetingProgram(dspy.Module):  # type: ignore[misc]
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__()
-        self.summarizer = dspy.ChainOfThought(MeetingSummary)  # type: ignore[attr-defined]
-        self.action_items = dspy.ChainOfThought(ExtractActionItems)  # type: ignore[attr-defined]
+        self.summarizer = dspy.ChainOfThought(MeetingSummary)
+        self.action_items = dspy.ChainOfThought(ExtractActionItems)
 
-    def forward(self, transcript: str) -> dict[str, Any]:  # type: ignore[override]
+    def forward(self, transcript: str) -> dict[str, Any]:
         summary = self.summarizer(transcript=transcript).summary
         actions = self.action_items(transcript=transcript).action_items
         return {"summary": summary, "action_items": actions}

@@ -26,10 +26,11 @@ class PipelineService:
         result: dict[str, Any] = await pipeline.run(document_id)
         return result
 
-    async def summarize_meeting(
+    async def _run_meeting_summarization(
         self,
         meeting_repo: MeetingRepositoryProtocol,
         meeting_id: int,
     ) -> dict[str, Any]:
         pipeline = MeetingSummarizationPipeline(meeting_repo, self._runs_repo)
-        return await pipeline.run(meeting_id)
+        result: dict[str, Any] = await pipeline.run(meeting_id)
+        return result
