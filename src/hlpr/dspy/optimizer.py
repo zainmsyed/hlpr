@@ -12,7 +12,7 @@ from pathlib import Path
 from typing import Any, Literal
 
 import dspy
-from dspy.teleprompt import BootstrapFewShot, BootstrapFewShotWithRandomSearch, COPRO, MIPROv2
+from dspy.teleprompt import COPRO, BootstrapFewShot, BootstrapFewShotWithRandomSearch, MIPROv2
 
 from .dataset import load_meeting_examples
 from .metrics import list_exact_match, summary_token_overlap

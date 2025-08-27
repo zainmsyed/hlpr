@@ -83,9 +83,13 @@ def summarize_meeting(
             transcript = meeting.transcript
             # Configure DSPy for Ollama/Gemma3
             try:
+                from pathlib import Path
+
                 import dspy
                 name = model.split("/")[-1]
-                dspy.configure(lm=dspy.LM(model=f"ollama/{name}", api_base="http://localhost:11434"))
+                # Use Docker detection like in optimizer.py
+                api_base = "http://host.docker.internal:11434" if Path("/.dockerenv").exists() else "http://localhost:11434"
+                dspy.configure(lm=dspy.LM(model=f"ollama/{name}", api_base=api_base))
             except Exception as e:
                 console.print(f"[yellow]Warning: failed to configure DSPy model {model}: {e}[/]")
             # Run MeetingProgram
@@ -186,6 +190,7 @@ def db_init(
 ) -> None:
     """Initialize database tables."""
     import asyncio
+
     from hlpr.db.base import init_models
 
     async def _run():

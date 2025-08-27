@@ -46,6 +46,8 @@ services:
       - HLPR_REDIS_URL=redis://redis:6379
     extra_hosts:
       - "host.docker.internal:host-gateway"
+    # Alternative: use host networking to access localhost services directly
+    # network_mode: "host"  # Uncomment this line and comment out the ports section if you prefer host networking
     # Rely on image CMD (uv run hlpr run-server) instead of direct uvicorn
     # Remove custom command to use Dockerfile default
 
