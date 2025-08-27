@@ -6,10 +6,13 @@ with comprehensive evaluation and artifact management.
 from __future__ import annotations
 
 import json
+import logging
 import time
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Literal
+
+logger = logging.getLogger(__name__)
 
 import dspy
 from dspy.teleprompt import COPRO, BootstrapFewShot, BootstrapFewShotWithRandomSearch, MIPROv2
@@ -131,8 +134,10 @@ def _optimize_with_mipro(program: MeetingProgram, trainset: list, valset: list, 
     optimizer = MIPROv2(
         metric=_create_metric(),
         auto="medium",  # Automatic optimization level
-        num_trials=config.iters,
-        init_temperature=0.7
+        max_bootstrapped_demos=config.max_bootstrapped_demos,
+        max_labeled_demos=config.max_labeled_demos,
+        init_temperature=0.7,
+        verbose=True
     )
     
     # Run optimization
@@ -143,7 +148,8 @@ def _optimize_with_mipro(program: MeetingProgram, trainset: list, valset: list, 
     results = {
         "optimizer": "mipro",
         "optimization_time": optimization_time,
-        "num_trials": config.iters,
+        "max_bootstrapped_demos": config.max_bootstrapped_demos,
+        "max_labeled_demos": config.max_labeled_demos,
         "trainset_size": len(trainset),
         "valset_size": len(valset)
     }
@@ -306,15 +312,42 @@ def optimize(config: OptimizerConfig) -> dict[str, Any]:
             "total_examples": len(examples),
             "train_examples": len(trainset),
             "val_examples": len(valset)
-        },
-        "program_state": str(optimized_program)
+        }
     }
     
-    # Save artifact
+    # Save artifact with proper DSPy program serialization
+    print("🔧 DEBUG: Starting artifact save process...")
     artifact_dir = Path(config.artifact_dir)
     artifact_dir.mkdir(parents=True, exist_ok=True)
     artifact_path = artifact_dir / "optimized_program.json"
     
+    # Save the DSPy program using dspy.save()
+    program_path = artifact_dir / "optimized_program_dspy"
+    print(f"🔧 DEBUG: Attempting to save DSPy program to {program_path}")
+    try:
+        optimized_program.save(str(program_path), save_program=True)
+        print(f"✅ DEBUG: Successfully saved DSPy program to {program_path}")
+        logger.info(f"✅ Saved DSPy program to {program_path}")
+    except Exception as e:
+        print(f"❌ DEBUG: Failed to save DSPy program: {e}")
+        logger.warning(f"⚠️ Failed to save DSPy program: {e}")
+        # Fallback to old string representation
+        artifact["program_state"] = str(optimized_program)
+        program_path = None
+    
+    # Add program path to artifact metadata
+    if program_path:
+        print("✅ DEBUG: Adding program_path to artifact")
+        artifact["program_path"] = str(program_path)
+        artifact["program_info"] = {
+            "summarizer_instruction": getattr(optimized_program.summarizer.predict, 'instructions', ''),
+            "action_items_instruction": getattr(optimized_program.action_items.predict, 'instructions', ''),
+            "model": config.model or "gpt-3.5-turbo"
+        }
+    else:
+        print("❌ DEBUG: No program_path, using string fallback")
+    
+    print(f"💾 DEBUG: Saving artifact JSON to {artifact_path}")
     with artifact_path.open("w", encoding="utf-8") as fh:
         json.dump(artifact, fh, indent=2)
     

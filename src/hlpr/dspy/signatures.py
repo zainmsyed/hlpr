@@ -5,7 +5,7 @@ import dspy
 
 
 class MeetingSummary(dspy.Signature):  # type: ignore[misc]
-    """Summarize the meeting transcript in 3 concise sentences focusing on key outcomes.
+    """Summarize the meeting transcript in 3 concise sentences focusing on key outcomes. Then give a summary of the meeting organized into topics with relevant bullets underneath.
 
     transcript -> summary
     """

@@ -44,6 +44,12 @@ services:
       - PYTHONUNBUFFERED=1
       - HLPR_DATABASE_URL=postgresql+asyncpg://hlpr:hlprpass@db:5432/hlpr
       - HLPR_REDIS_URL=redis://redis:6379
+      - OPENAI_API_KEY=${OPENAI_API_KEY}  # Pass OpenAI API key from .env
+      - GEMINI_API_KEY=${GEMINI_API_KEY}  # Pass Gemini API key from .env
+    env_file:
+      - .env  # Load environment variables from .env file
+    volumes:
+      - artifacts_data:/app/artifacts  # Use named volume for artifacts
     extra_hosts:
       - "host.docker.internal:host-gateway"
     # Alternative: use host networking to access localhost services directly
@@ -55,3 +61,4 @@ services:
 volumes:
   db_data: {}
   redis_data: {}
+  artifacts_data: {}  # Volume for persisting optimization artifacts
