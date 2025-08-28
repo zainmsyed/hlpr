@@ -1,0 +1,30 @@
+{
+  "timestamp": 1756389206.1586037,
+  "config": {
+    "optimizer": "mipro",
+    "model": "gpt-3.5-turbo",
+    "iters": 5,
+    "include_unverified": true,
+    "max_bootstrapped_demos": 4,
+    "max_labeled_demos": 16
+  },
+  "optimization_results": {
+    "optimizer": "mipro",
+    "optimization_time": 551.143346786499,
+    "max_bootstrapped_demos": 4,
+    "max_labeled_demos": 16,
+    "trainset_size": 48,
+    "valset_size": 12
+  },
+  "evaluation_results": {
+    "avg_summary_f1": 0.5125263292982346,
+    "avg_action_f1": 0.8115079365079364,
+    "composite_f1": 0.6620171329030855,
+    "num_examples": 12
+  },
+  "dataset_info": {
+    "total_examples": 60,
+    "train_examples": 48,
+    "val_examples": 12
+  }
+}

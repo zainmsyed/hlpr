@@ -107,17 +107,18 @@ class MeetingSummarizationPipeline:
             return None
         
         try:  # pragma: no cover - environment dependent
+            import pickle
             from hlpr.dspy.programs import MeetingProgram
 
             # Try to load the optimized program from artifacts
-            program_path = Path("artifacts/meeting/optimized_program")
-            if program_path.exists():
-                program = MeetingProgram()
-                program.load(str(program_path))
-                logger.info(f"Loaded optimized DSPy program from {program_path}")
-                return program
+            program_pickle_path = Path("artifacts/meeting/optimized_program/program.pkl")
+            if program_pickle_path.exists():
+                with open(program_pickle_path, 'rb') as f:
+                    optimized_program = pickle.load(f)
+                logger.info(f"Loaded optimized DSPy program from {program_pickle_path}")
+                return optimized_program
             else:
-                logger.warning(f"Optimized program not found at {program_path}, using default")
+                logger.warning(f"Optimized program not found at {program_pickle_path}, using default")
                 return MeetingProgram()
                 
         except Exception as e:
@@ -130,6 +131,17 @@ class MeetingSummarizationPipeline:
         if meeting is None:
             raise ValueError("Meeting not found")
         transcript: str = meeting.transcript
+        
+        # Configure DSPy if using optimized program
+        if self._dspy_program is not None:
+            try:
+                import dspy
+                # Configure with default model if not already configured
+                if not hasattr(dspy, '_lm') or dspy._lm is None:
+                    dspy.configure(lm=dspy.LM('ollama/gemma3', api_base='http://localhost:11434'))
+            except Exception as e:
+                logger.warning(f"Failed to configure DSPy LM: {e}")
+        
         if self._dspy_program is not None:
             try:
                 dspy_out = self._dspy_program(transcript=transcript)
