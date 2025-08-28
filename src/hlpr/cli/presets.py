@@ -119,7 +119,7 @@ class PresetManager:
         config_path = config_dir / "presets.yml"
 
         # Load existing presets
-        existing_data = {"presets": {}}
+        existing_data: dict[str, Any] = {"presets": {}}
         if config_path.exists():
             try:
                 with open(config_path, encoding="utf-8") as f:

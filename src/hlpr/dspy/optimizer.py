@@ -1,6 +1,6 @@
 """Advanced MIPRO optimization pipeline for meeting processing using DSPy.
 
-This implements multiple optimization strategies including MIPROv2, COPRO, and BootstrapFewShot
+This implements multiple optimization strategies including MIPROv2 and BootstrapFewShot
 with comprehensive evaluation and artifact management.
 """
 from __future__ import annotations
@@ -9,31 +9,20 @@ import json
 import logging
 import time
 from collections.abc import Callable
-from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Literal
+from typing import Any
 
 import dspy
 from dspy.teleprompt import BootstrapFewShot, MIPROv2
+
+from hlpr.core.errors import DatasetLoadError, ModelConfigurationError, OptimizationError
+from hlpr.core.optimization import OptimizationConfig
 
 from .dataset import load_meeting_examples
 from .metrics import list_exact_match, summary_token_overlap
 from .programs import MeetingProgram
 
 logger = logging.getLogger(__name__)
-
-
-@dataclass(slots=True)
-class OptimizerConfig:
-    data_path: str = "documents/training-data/meetings.txt"
-    include_unverified: bool = False
-    iters: int = 3
-    artifact_dir: str = "artifacts/meeting"
-    model: str | None = None  # e.g., "ollama/llama3" or OpenAI model name
-    optimizer: Literal["mipro", "bootstrap"] = "mipro"
-    max_bootstrapped_demos: int = 4
-    max_labeled_demos: int = 16
-    eval_kwargs: dict[str, Any] | None = None
 
 
 def _init_model(model: str | None) -> None:
@@ -53,16 +42,19 @@ def _init_model(model: str | None) -> None:
                 api_base=api_base
             )
             dspy.configure(lm=lm)
-            print(f"✅ Configured DSPy with Ollama model: {model_name} at {api_base}")
+            logger.info(f"Configured DSPy with Ollama model: {model_name} at {api_base}")
             return
         except Exception as e:  # pragma: no cover
-            print(f"⚠️ Failed to configure Ollama model {chosen}: {e}")
-            print("🔄 Falling back to OpenAI model...")
+            logger.warning(f"Failed to configure Ollama model {chosen}: {e}")
+            logger.info("Falling back to OpenAI model...")
     
     # Fallback to OpenAI-compatible models via DSPy LM
-    lm = dspy.LM(model=chosen)
-    dspy.configure(lm=lm)
-    print(f"✅ Configured DSPy with model: {chosen}")
+    try:
+        lm = dspy.LM(model=chosen)
+        dspy.configure(lm=lm)
+        logger.info(f"Configured DSPy with model: {chosen}")
+    except Exception as e:
+        raise ModelConfigurationError(chosen, e) from e
 
 
 def _convert_to_dspy_examples(meeting_examples: list[Any]) -> list[dspy.Example]:
@@ -115,9 +107,9 @@ def _create_metric() -> Callable[..., float]:
     return meeting_metric
 
 
-def _optimize_with_mipro(program: MeetingProgram, trainset: list[dspy.Example], valset: list[dspy.Example], config: OptimizerConfig) -> tuple[Any, dict[str, Any]]:
+def _optimize_with_mipro(program: MeetingProgram, trainset: list[dspy.Example], valset: list[dspy.Example], config: OptimizationConfig) -> tuple[Any, dict[str, Any]]:
     """Optimize using MIPROv2."""
-    print("🔧 Starting MIPROv2 optimization...")
+    logger.info("Starting MIPROv2 optimization")
     
     # Initialize MIPROv2 optimizer
     optimizer = MIPROv2(
@@ -146,9 +138,9 @@ def _optimize_with_mipro(program: MeetingProgram, trainset: list[dspy.Example], 
     return optimized_program, results
 
 
-def _optimize_with_bootstrap(program: MeetingProgram, trainset: list[dspy.Example], config: OptimizerConfig) -> tuple[Any, dict[str, Any]]:
+def _optimize_with_bootstrap(program: MeetingProgram, trainset: list[dspy.Example], config: OptimizationConfig) -> tuple[Any, dict[str, Any]]:
     """Optimize using BootstrapFewShot."""
-    print("🔧 Starting BootstrapFewShot optimization...")
+    logger.info("Starting BootstrapFewShot optimization")
     
     # Initialize BootstrapFewShot optimizer
     optimizer = BootstrapFewShot(
@@ -175,7 +167,7 @@ def _optimize_with_bootstrap(program: MeetingProgram, trainset: list[dspy.Exampl
 
 def _evaluate_program(program: Any, examples: list[Any]) -> dict[str, float]:
     """Evaluate the optimized program on examples."""
-    print("📊 Evaluating optimized program...")
+    logger.info("Evaluating optimized program")
     
     summary_scores = []
     action_scores = []
@@ -191,7 +183,7 @@ def _evaluate_program(program: Any, examples: list[Any]) -> dict[str, float]:
             summary_scores.append(summary_score)
             action_scores.append(action_score)
         except Exception as e:
-            print(f"⚠️  Evaluation error for example: {e}")
+            logger.warning(f"Evaluation error for example: {e}")
             summary_scores.append(0.0)
             action_scores.append(0.0)
     
@@ -203,31 +195,67 @@ def _evaluate_program(program: Any, examples: list[Any]) -> dict[str, float]:
     }
 
 
-def optimize(config: OptimizerConfig) -> dict[str, Any]:
+def _save_optimization_artifact(program: Any, metadata: dict[str, Any], artifact_dir: Path) -> str:
+    """Save optimization results to artifact directory.
+    
+    Args:
+        program: The optimized DSPy program
+        metadata: Metadata dictionary with config, results, etc.
+        artifact_dir: Directory to save artifacts in
+        
+    Returns:
+        Path to the saved artifact JSON file
+    """
+    artifact_dir.mkdir(parents=True, exist_ok=True)
+    
+    # Save DSPy program using native format
+    program_path = artifact_dir / "optimized_program"
+    try:
+        program.save(str(program_path), save_program=True)
+        logger.info(f"Saved DSPy program to {program_path}")
+    except Exception as e:
+        logger.warning(f"Failed to save DSPy program: {e}")
+        # Continue with JSON-only artifact
+    
+    # Save metadata as JSON
+    metadata_path = artifact_dir / "metadata.json"
+    with metadata_path.open("w", encoding="utf-8") as f:
+        json.dump(metadata, f, indent=2)
+    
+    logger.info(f"Saved optimization metadata to {metadata_path}")
+    return str(metadata_path)
+
+
+def optimize(config: OptimizationConfig) -> dict[str, Any]:
     """Run the complete MIPRO optimization pipeline."""
-    print(f"🚀 Starting optimization with {config.optimizer} strategy...")
+    logger.info(f"Starting optimization with {config.optimizer} strategy")
     
     # Initialize model
     _init_model(config.model)
     
     # Load examples
-    examples = load_meeting_examples(
-        config.data_path, include_unverified=config.include_unverified
-    )
-    if not examples:
-        raise ValueError("No examples loaded for optimization")
+    try:
+        examples = load_meeting_examples(
+            config.data_path, include_unverified=config.include_unverified
+        )
+        if not examples:
+            raise DatasetLoadError(config.data_path)
+    except Exception as e:
+        if isinstance(e, DatasetLoadError):
+            raise
+        raise DatasetLoadError(config.data_path, e) from e
     
-    print(f"📚 Loaded {len(examples)} examples for optimization")
+    logger.info(f"Loaded {len(examples)} examples for optimization")
     
     # Convert to DSPy format
     dspy_examples = _convert_to_dspy_examples(examples)
     
-    # Split into train/validation sets (80/20 split)
-    split_idx = int(0.8 * len(dspy_examples))
+    # Split into train/validation sets using config parameter
+    split_idx = int(config.train_split * len(dspy_examples))
     trainset = dspy_examples[:split_idx]
     valset = dspy_examples[split_idx:] if split_idx < len(dspy_examples) else dspy_examples[-1:]
     
-    print(f"📊 Train set: {len(trainset)} examples, Validation set: {len(valset)} examples")
+    logger.info(f"Train set: {len(trainset)} examples, Validation set: {len(valset)} examples")
     
     # Initialize program
     program = MeetingProgram()
@@ -238,7 +266,11 @@ def optimize(config: OptimizerConfig) -> dict[str, Any]:
     elif config.optimizer == "bootstrap":
         optimized_program, opt_results = _optimize_with_bootstrap(program, trainset, config)
     else:
-        raise ValueError(f"Unknown optimizer: {config.optimizer}. Supported: mipro, bootstrap")
+        raise OptimizationError(
+            f"Unknown optimizer: {config.optimizer}. Supported: mipro, bootstrap",
+            suggestions=["Use 'mipro' for advanced optimization or 'bootstrap' for quick optimization"],
+            context={"available_optimizers": ["mipro", "bootstrap"], "requested_optimizer": config.optimizer}
+        )
     
     # Evaluate the optimized program
     eval_results = _evaluate_program(optimized_program, examples[split_idx:] if split_idx < len(examples) else examples[-1:])
@@ -263,48 +295,19 @@ def optimize(config: OptimizerConfig) -> dict[str, Any]:
         }
     }
     
-    # Save artifact with proper DSPy program serialization
-    print("🔧 DEBUG: Starting artifact save process...")
+    # Save artifact using simplified approach
     artifact_dir = Path(config.artifact_dir)
-    artifact_dir.mkdir(parents=True, exist_ok=True)
-    artifact_path = artifact_dir / "optimized_program.json"
+    artifact_path = _save_optimization_artifact(optimized_program, artifact, artifact_dir)
     
-    # Save the DSPy program using dspy.save()
-    program_path: Path | None = artifact_dir / "optimized_program_dspy"
-    print(f"🔧 DEBUG: Attempting to save DSPy program to {program_path}")
-    try:
-        optimized_program.save(str(program_path), save_program=True)
-        print(f"✅ DEBUG: Successfully saved DSPy program to {program_path}")
-        logger.info(f"✅ Saved DSPy program to {program_path}")
-    except Exception as e:
-        print(f"❌ DEBUG: Failed to save DSPy program: {e}")
-        logger.warning(f"⚠️ Failed to save DSPy program: {e}")
-        # Fallback to old string representation
-        artifact["program_state"] = str(optimized_program)
-        program_path = None
-    
-    # Add program path to artifact metadata
-    if program_path:
-        print("✅ DEBUG: Adding program_path to artifact")
-        artifact["program_path"] = str(program_path)
-        artifact["program_info"] = {
-            "summarizer_instruction": getattr(optimized_program.summarizer.predict, 'instructions', ''),
-            "action_items_instruction": getattr(optimized_program.action_items.predict, 'instructions', ''),
-            "model": config.model or "gpt-3.5-turbo"
-        }
-    else:
-        print("❌ DEBUG: No program_path, using string fallback")
-    
-    print(f"💾 DEBUG: Saving artifact JSON to {artifact_path}")
-    with artifact_path.open("w", encoding="utf-8") as fh:
-        json.dump(artifact, fh, indent=2)
-    
-    print(f"✅ Optimization complete! Artifact saved to {artifact_path}")
+    logger.info(f"Optimization complete! Artifact saved to {artifact_path}")
+    # User-facing output for final results
     print(f"📈 Final composite F1 score: {eval_results['composite_f1']:.3f}")
+    print(f"💾 Artifact saved to: {artifact_path}")
+    print(f"⏱️  Optimization time: {opt_results.get('optimization_time', 0):.1f}s")
     
     return {
         "success": True,
-        "artifact_path": str(artifact_path),
+        "artifact_path": artifact_path,
         "composite_score": eval_results['composite_f1'],
         "summary_f1": eval_results['avg_summary_f1'],
         "action_f1": eval_results['avg_action_f1'],

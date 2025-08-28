@@ -25,7 +25,8 @@ def optimize_meeting(
     """Run advanced DSPy optimization (MIPROv2, COPRO, Bootstrap) over meeting dataset."""
     from rich.progress import Progress, SpinnerColumn, TextColumn
 
-    from hlpr.dspy.optimizer import OptimizerConfig, optimize
+    from hlpr.core.optimization import OptimizationConfig
+    from hlpr.dspy.optimizer import optimize
 
     # Validate optimizer choice
     valid_optimizers = ["mipro", "bootstrap"]
@@ -33,7 +34,7 @@ def optimize_meeting(
         console.print(f"[red]Invalid optimizer: {optimizer}. Choose from: {valid_optimizers}[/red]")
         return
 
-    cfg = OptimizerConfig(
+    cfg = OptimizationConfig(
         data_path=data_path,
         iters=iters,
         include_unverified=include_unverified,

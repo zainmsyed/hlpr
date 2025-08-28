@@ -80,11 +80,11 @@ class CommandWizard:
             if validator:
                 try:
                     validator(response)
-                    return response
+                    return str(response)
                 except ValueError as e:
                     print_error(str(e))
             else:
-                return response
+                return str(response)
 
     def prompt_yes_no(self, message: str, default: bool = False) -> bool:
         """Prompt user for yes/no input."""

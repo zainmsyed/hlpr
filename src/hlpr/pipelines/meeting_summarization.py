@@ -5,6 +5,7 @@ Includes heuristic extractor plus optional DSPy artifact fallback.
 from __future__ import annotations
 
 import json
+import logging
 import re
 from dataclasses import dataclass
 from pathlib import Path
@@ -14,6 +15,8 @@ from hlpr.pipelines.interfaces import (
     MeetingRepositoryProtocol,
     PipelineRunRepositoryProtocol,
 )
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass(slots=True)
@@ -88,33 +91,37 @@ class MeetingSummarizationPipeline:
         self._dspy_program = self._init_dspy_program()
 
     def _load_artifact(self) -> dict[str, Any] | None:
-        path = Path("artifacts/meeting/optimized_program.json")
-        if path.exists():  # pragma: no branch
+        """Load optimization artifact from metadata.json file."""
+        metadata_path = Path("artifacts/meeting/metadata.json")
+        if metadata_path.exists():
             try:
-                artifact: dict[str, Any] = json.loads(path.read_text(encoding="utf-8"))
-                return artifact
-            except Exception:  # pragma: no cover
+                data = json.loads(metadata_path.read_text(encoding="utf-8"))
+                return data if isinstance(data, dict) else None
+            except Exception:
                 return None
         return None
 
     def _init_dspy_program(self) -> Any | None:  # lazy import to avoid hard dependency if unused
+        """Initialize DSPy program from optimized artifact."""
         if not self._optimized_artifact:
             return None
+        
         try:  # pragma: no cover - environment dependent
-
             from hlpr.dspy.programs import MeetingProgram
 
-            # Check if we have a saved program path
-            program_path = self._optimized_artifact.get("program_path")
-            if program_path and Path(program_path).exists():
-                # Load the optimized program
+            # Try to load the optimized program from artifacts
+            program_path = Path("artifacts/meeting/optimized_program")
+            if program_path.exists():
                 program = MeetingProgram()
-                program.load(program_path)
+                program.load(str(program_path))
+                logger.info(f"Loaded optimized DSPy program from {program_path}")
                 return program
             else:
-                # Fallback to default program if no saved program available
+                logger.warning(f"Optimized program not found at {program_path}, using default")
                 return MeetingProgram()
-        except Exception:
+                
+        except Exception as e:
+            logger.warning(f"Failed to load DSPy program: {e}")
             return None
 
     async def run(self, meeting_id: int) -> dict[str, Any]:

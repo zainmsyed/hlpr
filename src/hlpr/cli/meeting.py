@@ -45,7 +45,7 @@ def quick_meeting(
     from hlpr.db.base import get_session_factory, init_models
 
     # Define output presets
-    presets = {
+    presets: dict[str, dict[str, str | bool]] = {
         "default": {
             "output": f"meeting_{meeting_id}_summary.md",
             "include_action_items": True,
@@ -69,7 +69,7 @@ def quick_meeting(
         return
 
     preset_config = presets[preset]
-    output_file = preset_config["output"]
+    output_file = str(preset_config["output"])
 
     # Use provided model or default
     selected_model = model or "ollama/gemma3"
@@ -109,7 +109,7 @@ def quick_meeting(
 
             # Run MeetingProgram
             try:
-                from hlpr.dspy.optimizer import MeetingProgram
+                from hlpr.dspy.programs import MeetingProgram
 
                 prog = MeetingProgram()
                 res = prog(transcript=transcript)

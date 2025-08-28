@@ -36,6 +36,7 @@ def detect_execution_context() -> ExecutionContext:
         result = subprocess.run(
             ["docker", "--version"],
             capture_output=True,
+            text=True,
             timeout=5
         )
         if result.returncode == 0:
@@ -64,6 +65,7 @@ def get_docker_compose_command() -> list[str]:
             result = subprocess.run(
                 cmd + ["--version"],
                 capture_output=True,
+                text=True,
                 timeout=5
             )
             if result.returncode == 0:
@@ -80,6 +82,7 @@ def get_uv_command() -> list[str]:
         result = subprocess.run(
             ["uv", "--version"],
             capture_output=True,
+            text=True,
             timeout=5
         )
         if result.returncode == 0:
