@@ -1,11 +1,7 @@
 """Unit tests for the command templates system."""
-import json
 import tempfile
 import time
 from pathlib import Path
-from unittest.mock import patch, MagicMock
-
-import pytest
 
 from hlpr.cli.templates import CommandTemplate, TemplateManager
 

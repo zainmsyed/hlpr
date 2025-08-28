@@ -8,7 +8,7 @@ from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from hlpr.db.dependencies import get_session
-from hlpr.db.repositories import MeetingRepository
+from hlpr.db.repositories import DocumentRepository, MeetingRepository, PipelineRunRepository
 from hlpr.services.pipelines import PipelineService
 
 router = APIRouter(prefix="/meetings", tags=["meetings"])
@@ -45,7 +45,7 @@ async def create_meeting(
     meeting: MeetingCreate, session: AsyncSession = Depends(get_session)  # noqa: B008
 ) -> dict[str, Any]:
     repo = MeetingRepository(session)
-    meeting_record = await repo.create(
+    meeting_record = await repo.add(
         project_id=meeting.project_id,
         title=meeting.title,
         transcript=meeting.transcript,
@@ -77,9 +77,11 @@ async def summarize_meeting(
     meeting_id: int, session: AsyncSession = Depends(get_session)  # noqa: B008
 ) -> dict[str, Any]:
     meeting_repo = MeetingRepository(session)
-    service = PipelineService(session)
+    docs_repo = DocumentRepository(session)
+    runs_repo = PipelineRunRepository(session)
+    service = PipelineService(docs_repo, runs_repo)
     try:
-        output: dict[str, Any] = await service.summarize_meeting(meeting_repo, meeting_id)
+        output: dict[str, Any] = await service._run_meeting_summarization(meeting_repo, meeting_id)
     except ValueError as err:  # B904: explicit chaining
         raise HTTPException(status_code=404, detail="Meeting not found") from err
     await session.commit()

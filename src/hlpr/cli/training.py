@@ -17,7 +17,7 @@ def optimize_meeting(
     ),
     model: str | None = typer.Option(None, help="Model identifier (e.g., ollama/llama3)"),
     optimizer: str = typer.Option(
-        "mipro", help="Optimization strategy: mipro, copro, bootstrap, bootstrap_random"
+        "mipro", help="Optimization strategy: mipro, bootstrap"
     ),
     max_bootstrapped_demos: int = typer.Option(4, help="Max bootstrapped demonstrations"),
     max_labeled_demos: int = typer.Option(16, help="Max labeled demonstrations"),
@@ -28,7 +28,7 @@ def optimize_meeting(
     from hlpr.dspy.optimizer import OptimizerConfig, optimize
 
     # Validate optimizer choice
-    valid_optimizers = ["mipro", "copro", "bootstrap", "bootstrap_random"]
+    valid_optimizers = ["mipro", "bootstrap"]
     if optimizer not in valid_optimizers:
         console.print(f"[red]Invalid optimizer: {optimizer}. Choose from: {valid_optimizers}[/red]")
         return

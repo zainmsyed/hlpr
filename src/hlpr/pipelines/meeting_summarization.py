@@ -1,22 +1,6 @@
 """Meeting summarization & extraction pipeline.
 
-Includes heuristic extractor plus optional DSPy opti        try:  # pragma: no cover - environment dependent
-            import dspy
-
-            from hlpr.dspy.signatures import ExtractActionItems, MeetingSummary
-
-            class _Prog(dspy.Module):  # type: ignore[misc]
-                def __init__(self) -> None:
-                    super().__init__()
-                    self.summarizer = dspy.ChainOfThought(MeetingSummary)
-                    self.action_items = dspy.ChainOfThought(ExtractActionItems)
-
-                def forward(self, transcript: str) -> dict[str, Any]:  # type: ignore[override]
-                    s = self.summarizer(transcript=transcript).summary
-                    a = self.action_items(transcript=transcript).action_items
-                    return {"summary": s, "action_items": a}
-
-            return _Prog()ifact fallback.
+Includes heuristic extractor plus optional DSPy artifact fallback.
 """
 from __future__ import annotations
 
@@ -117,42 +101,19 @@ class MeetingSummarizationPipeline:
         if not self._optimized_artifact:
             return None
         try:  # pragma: no cover - environment dependent
-            import dspy
 
-            from hlpr.dspy.signatures import ExtractActionItems, MeetingSummary
+            from hlpr.dspy.programs import MeetingProgram
 
             # Check if we have a saved program path
             program_path = self._optimized_artifact.get("program_path")
             if program_path and Path(program_path).exists():
                 # Load the optimized program
-                class _Prog(dspy.Module):
-                    def __init__(self) -> None:
-                        super().__init__()
-                        self.summarizer = dspy.ChainOfThought(MeetingSummary)
-                        self.action_items = dspy.ChainOfThought(ExtractActionItems)
-
-                    def forward(self, transcript: str) -> dict[str, Any]:
-                        s = self.summarizer(transcript=transcript).summary
-                        a = self.action_items(transcript=transcript).action_items
-                        return {"summary": s, "action_items": a}
-
-                program = _Prog()
+                program = MeetingProgram()
                 program.load(program_path)
                 return program
             else:
                 # Fallback to default program if no saved program available
-                class _Prog(dspy.Module):
-                    def __init__(self) -> None:
-                        super().__init__()
-                        self.summarizer = dspy.ChainOfThought(MeetingSummary)
-                        self.action_items = dspy.ChainOfThought(ExtractActionItems)
-
-                    def forward(self, transcript: str) -> dict[str, Any]:
-                        s = self.summarizer(transcript=transcript).summary
-                        a = self.action_items(transcript=transcript).action_items
-                        return {"summary": s, "action_items": a}
-
-                return _Prog()
+                return MeetingProgram()
         except Exception:
             return None
 

@@ -14,11 +14,11 @@ from pathlib import Path
 from typing import Any, Literal
 
 import dspy
-from dspy.teleprompt import COPRO, BootstrapFewShot, BootstrapFewShotWithRandomSearch, MIPROv2
+from dspy.teleprompt import BootstrapFewShot, MIPROv2
 
 from .dataset import load_meeting_examples
 from .metrics import list_exact_match, summary_token_overlap
-from .signatures import ExtractActionItems, MeetingSummary
+from .programs import MeetingProgram
 
 logger = logging.getLogger(__name__)
 
@@ -30,7 +30,7 @@ class OptimizerConfig:
     iters: int = 3
     artifact_dir: str = "artifacts/meeting"
     model: str | None = None  # e.g., "ollama/llama3" or OpenAI model name
-    optimizer: Literal["mipro", "copro", "bootstrap", "bootstrap_random"] = "mipro"
+    optimizer: Literal["mipro", "bootstrap"] = "mipro"
     max_bootstrapped_demos: int = 4
     max_labeled_demos: int = 16
     eval_kwargs: dict[str, Any] | None = None
@@ -63,18 +63,6 @@ def _init_model(model: str | None) -> None:
     lm = dspy.LM(model=chosen)
     dspy.configure(lm=lm)
     print(f"✅ Configured DSPy with model: {chosen}")
-
-
-class MeetingProgram(dspy.Module):  # type: ignore[misc]
-    def __init__(self) -> None:
-        super().__init__()
-        self.summarizer = dspy.ChainOfThought(MeetingSummary)
-        self.action_items = dspy.ChainOfThought(ExtractActionItems)
-
-    def forward(self, transcript: str) -> dict[str, Any]:
-        summary = self.summarizer(transcript=transcript).summary
-        actions = self.action_items(transcript=transcript).action_items
-        return {"summary": summary, "action_items": actions}
 
 
 def _convert_to_dspy_examples(meeting_examples: list[Any]) -> list[dspy.Example]:
@@ -158,16 +146,15 @@ def _optimize_with_mipro(program: MeetingProgram, trainset: list[dspy.Example], 
     return optimized_program, results
 
 
-def _optimize_with_copro(program: MeetingProgram, trainset: list[dspy.Example], config: OptimizerConfig) -> tuple[Any, dict[str, Any]]:
-    """Optimize using COPRO (Collaborative Prompt Optimization)."""
-    print("🔧 Starting COPRO optimization...")
+def _optimize_with_bootstrap(program: MeetingProgram, trainset: list[dspy.Example], config: OptimizerConfig) -> tuple[Any, dict[str, Any]]:
+    """Optimize using BootstrapFewShot."""
+    print("🔧 Starting BootstrapFewShot optimization...")
     
-    # Initialize COPRO optimizer
-    optimizer = COPRO(
+    # Initialize BootstrapFewShot optimizer
+    optimizer = BootstrapFewShot(
         metric=_create_metric(),
-        breadth=10,
-        depth=config.iters,
-        init_temperature=1.4
+        max_bootstrapped_demos=config.max_bootstrapped_demos,
+        max_labeled_demos=config.max_labeled_demos
     )
     
     # Run optimization
@@ -176,43 +163,7 @@ def _optimize_with_copro(program: MeetingProgram, trainset: list[dspy.Example], 
     optimization_time = time.time() - start_time
     
     results = {
-        "optimizer": "copro",
-        "optimization_time": optimization_time,
-        "breadth": 10,
-        "depth": config.iters,
-        "trainset_size": len(trainset)
-    }
-    
-    return optimized_program, results
-
-
-def _optimize_with_bootstrap(program: MeetingProgram, trainset: list[dspy.Example], config: OptimizerConfig, random_search: bool = False) -> tuple[Any, dict[str, Any]]:
-    """Optimize using BootstrapFewShot or BootstrapFewShotWithRandomSearch."""
-    optimizer_name = "bootstrap_random" if random_search else "bootstrap"
-    print(f"🔧 Starting {optimizer_name} optimization...")
-    
-    # Choose optimizer
-    if random_search:
-        optimizer = BootstrapFewShotWithRandomSearch(
-            metric=_create_metric(),
-            max_bootstrapped_demos=config.max_bootstrapped_demos,
-            max_labeled_demos=config.max_labeled_demos,
-            num_candidate_programs=config.iters
-        )
-    else:
-        optimizer = BootstrapFewShot(
-            metric=_create_metric(),
-            max_bootstrapped_demos=config.max_bootstrapped_demos,
-            max_labeled_demos=config.max_labeled_demos
-        )
-    
-    # Run optimization
-    start_time = time.time()
-    optimized_program = optimizer.compile(program, trainset=trainset)
-    optimization_time = time.time() - start_time
-    
-    results = {
-        "optimizer": optimizer_name,
+        "optimizer": "bootstrap",
         "optimization_time": optimization_time,
         "max_bootstrapped_demos": config.max_bootstrapped_demos,
         "max_labeled_demos": config.max_labeled_demos,
@@ -284,14 +235,10 @@ def optimize(config: OptimizerConfig) -> dict[str, Any]:
     # Run optimization based on strategy
     if config.optimizer == "mipro":
         optimized_program, opt_results = _optimize_with_mipro(program, trainset, valset, config)
-    elif config.optimizer == "copro":
-        optimized_program, opt_results = _optimize_with_copro(program, trainset, config)
     elif config.optimizer == "bootstrap":
-        optimized_program, opt_results = _optimize_with_bootstrap(program, trainset, config, random_search=False)
-    elif config.optimizer == "bootstrap_random":
-        optimized_program, opt_results = _optimize_with_bootstrap(program, trainset, config, random_search=True)
+        optimized_program, opt_results = _optimize_with_bootstrap(program, trainset, config)
     else:
-        raise ValueError(f"Unknown optimizer: {config.optimizer}")
+        raise ValueError(f"Unknown optimizer: {config.optimizer}. Supported: mipro, bootstrap")
     
     # Evaluate the optimized program
     eval_results = _evaluate_program(optimized_program, examples[split_idx:] if split_idx < len(examples) else examples[-1:])

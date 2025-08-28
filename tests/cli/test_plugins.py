@@ -1,11 +1,11 @@
 """Unit tests for the plugin system."""
 import tempfile
 from pathlib import Path
-from unittest.mock import patch, Mock
+from unittest.mock import Mock, patch
 
 import pytest
 
-from hlpr.cli.plugins import PluginManager, hlpr_command, get_plugin_manager
+from hlpr.cli.plugins import PluginManager, get_plugin_manager, hlpr_command
 
 
 class TestPluginManager:
