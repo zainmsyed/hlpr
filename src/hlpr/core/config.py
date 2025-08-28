@@ -33,7 +33,7 @@ class Config:
         """Load configuration from file (simple key=value format for now)."""
         if self.config_file.exists():
             try:
-                config = {}
+                config: dict[str, Any] = {}
                 with open(self.config_file, encoding="utf-8") as f:
                     for line in f:
                         line = line.strip()
@@ -126,6 +126,11 @@ class Config:
 
         self._config.update(default_config)
         self.save()
+
+
+def get_config_dir() -> Path:
+    """Get the configuration directory path."""
+    return Path.home() / ".config" / "hlpr"
 
 
 # Global config instance

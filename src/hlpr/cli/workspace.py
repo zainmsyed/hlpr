@@ -1,7 +1,7 @@
 """Workspace management and health commands."""
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Annotated
+from typing import TYPE_CHECKING, Annotated, Any
 
 import typer
 
@@ -10,6 +10,11 @@ from hlpr.core.settings import get_settings
 
 if TYPE_CHECKING:
     from hlpr.cli.wizard import CommandWizard
+
+
+# Create workspace subcommand
+workspace_app = typer.Typer(help="Manage hlpr workspaces")
+app.add_typer(workspace_app, name="workspace")
 
 
 @app.command("health")
@@ -367,40 +372,423 @@ def setup_environment(
         console.print("[yellow]Setup completed with warnings. Check the output above.[/yellow]")
 
 
-@app.command("configure")
-def configure_environment(
-    target: str = typer.Argument("all", help="What to configure: all, presets, profiles, environment"),
-    interactive: bool = typer.Option(True, "--interactive/--non-interactive", help="Use interactive mode"),
-) -> None:
-    """Interactive configuration editor for hlpr settings."""
-    from hlpr.cli.wizard import get_wizard
+@workspace_app.command("init")
+def init_workspace(
+    name: str = typer.Option(None, help="Name for the workspace"),
+    template: str = typer.Option("default", help="Workspace template to use"),
+    force: bool = typer.Option(False, "--force", "-f", help="Overwrite existing workspace"),
+    skip_db: bool = typer.Option(False, "--skip-db", help="Skip database initialization"),
+    skip_config: bool = typer.Option(False, "--skip-config", help="Skip configuration setup"),
+):
+    """Initialize a new hlpr workspace with default configuration."""
+    from pathlib import Path
 
-    console.print("\n[bold green]⚙️ hlpr Configuration Editor[/bold green]")
+    console.print("\n[bold green]🚀 Initializing hlpr workspace[/bold green]")
 
-    wizard = get_wizard()
+    # Determine workspace name
+    if not name:
+        cwd_name = Path.cwd().name
+        name = cwd_name if cwd_name != "hlpr" else "my-hlpr-workspace"
 
-    if target in ["all", "presets"]:
-        console.print("\n[bold blue]Preset Configuration:[/bold blue]")
-        if interactive:
-            configure_presets_interactive(wizard)
+    workspace_path = Path.cwd()
+
+    # Check if workspace already exists
+    config_file = workspace_path / "hlpr.toml"
+    if config_file.exists() and not force:
+        print_error(f"Workspace already exists at {workspace_path}")
+        console.print("Use [bold]--force[/bold] to reinitialize or specify a different [bold]--name[/bold]")
+        return
+
+    console.print(f"Setting up workspace: [bold]{name}[/bold]")
+    console.print(f"Location: [bold]{workspace_path}[/bold]")
+
+    try:
+        # Create basic directory structure
+        dirs_to_create = [
+            "artifacts/meeting",
+            "documents/training-data",
+            "tests",
+            ".hlpr"
+        ]
+
+        for dir_path in dirs_to_create:
+            Path(dir_path).mkdir(parents=True, exist_ok=True)
+            console.print(f"  📁 Created directory: {dir_path}")
+
+        # Create default configuration
+        if not skip_config:
+            console.print("\n[bold blue]Creating default configuration...[/bold blue]")
+
+            default_config = f"""# hlpr workspace configuration
+# Generated for workspace: {name}
+
+[workspace]
+name = "{name}"
+created = "{Path.cwd()}"
+template = "{template}"
+
+[defaults]
+model = "ollama/gemma3"
+optimizer = "bootstrap"
+iterations = 5
+
+[database]
+url = "sqlite+aiosqlite:///./{name}.db"
+
+[output]
+format = "markdown"
+auto_save = true
+"""
+
+            config_file.write_text(default_config)
+            console.print("  📄 Created config file: hlpr.toml")
+
+            # Create default profiles
+            from hlpr.cli.profiles import get_profile_manager
+            manager = get_profile_manager()
+
+            # Development profile
+            dev_config = {
+                "environment": "development",
+                "model": "ollama/gemma3",
+                "optimizer": "bootstrap",
+                "iters": 2,
+                "debug": True,
+                "auto_fallback": True
+            }
+            manager.save_profile("development", dev_config)
+
+            # Production profile
+            prod_config = {
+                "environment": "production",
+                "model": "gpt-4",
+                "optimizer": "mipro",
+                "iters": 20,
+                "debug": False,
+                "auto_fallback": False
+            }
+            manager.save_profile("production", prod_config)
+
+            console.print("  👤 Created default profiles: development, production")
+
+        # Initialize database
+        if not skip_db:
+            console.print("\n[bold blue]Initializing database...[/bold blue]")
+            try:
+                from hlpr.cli.executor import smart_execute
+                smart_execute("hlpr", ["db-init"])
+                print_success("Database initialized successfully")
+            except Exception as e:
+                print_error(f"Database initialization failed: {e}")
+                console.print("[yellow]You can initialize the database later with 'hlpr db-init'[/yellow]")
+
+        # Create .gitignore if it doesn't exist
+        gitignore_path = workspace_path / ".gitignore"
+        if not gitignore_path.exists():
+            gitignore_content = """# hlpr workspace
+*.db
+*.db-journal
+__pycache__/
+*.pyc
+.pytest_cache/
+.coverage
+htmlcov/
+.env
+.env.local
+artifacts/*/optimized_program.pkl
+test_artifacts/
+"""
+            gitignore_path.write_text(gitignore_content)
+            console.print("  📄 Created .gitignore file")
+
+        print_success(f"\n🎉 Workspace '{name}' initialized successfully!")
+        console.print("\n[bold]Next steps:[/bold]")
+        console.print("  1. Review configuration: [green]hlpr workspace status[/green]")
+        console.print("  2. Switch to development: [green]hlpr workspace switch development[/green]")
+        console.print("  3. Run your first command: [green]hlpr wizard[/green]")
+
+    except Exception as e:
+        print_error(f"Workspace initialization failed: {e}")
+        raise typer.Exit(1) from e
+
+
+@workspace_app.command("status")
+def workspace_status(
+    verbose: bool = typer.Option(False, "--verbose", "-v", help="Show detailed information"),
+    check_health: bool = typer.Option(True, "--check-health/--no-check-health", help="Include health checks"),
+):
+    """Show current workspace configuration and environment details."""
+    from pathlib import Path
+
+    console.print("\n[bold green]📊 Workspace Status[/bold green]")
+
+    workspace_path = Path.cwd()
+    config_file = workspace_path / "hlpr.toml"
+
+    # Basic workspace info
+    table = create_table("Workspace Information", ["Property", "Value"])
+
+    if config_file.exists():
+        try:
+            import tomllib
+            with open(config_file, "rb") as f:
+                config = tomllib.load(f)
+
+            workspace_config = config.get("workspace", {})
+            table.add_row("Name", workspace_config.get("name", "Unknown"))
+            table.add_row("Location", str(workspace_path))
+            table.add_row("Template", workspace_config.get("template", "default"))
+            table.add_row("Config File", str(config_file))
+
+        except Exception as e:
+            table.add_row("Config Status", f"[red]Error: {e}[/red]")
+    else:
+        table.add_row("Config Status", "[yellow]No hlpr.toml found[/yellow]")
+        table.add_row("Location", str(workspace_path))
+
+    console.print(table)
+
+    # Environment information
+    if verbose or check_health:
+        console.print("\n[bold blue]Environment Details[/bold blue]")
+        try:
+            from hlpr.cli.executor import get_execution_info
+            info = get_execution_info()
+
+            env_table = create_table("Environment", ["Property", "Value"])
+            env_table.add_row("Execution Context", info["context"])
+            env_table.add_row("Docker Available", "✅" if info["docker_available"] else "❌")
+            env_table.add_row("Is Docker", "✅" if info["is_docker"] else "❌")
+            env_table.add_row("UV Available", "✅" if info["uv_available"] else "❌")
+            env_table.add_row("Python Path", info["python_path"])
+            console.print(env_table)
+
+        except Exception as e:
+            console.print(f"[red]Environment check failed: {e}[/red]")
+
+    # Current configuration
+    console.print("\n[bold blue]Current Configuration[/bold blue]")
+    try:
+        settings = get_settings()
+
+        config_table = create_table("Settings", ["Setting", "Value"])
+        config_table.add_row("Environment", settings.environment)
+        config_table.add_row("Debug Mode", "✅" if settings.debug else "❌")
+        config_table.add_row("API Prefix", settings.api_prefix)
+        config_table.add_row("Database URL", settings.database_url or "Not set")
+
+        console.print(config_table)
+
+    except Exception as e:
+        console.print(f"[red]Configuration check failed: {e}[/red]")
+
+    # Active profiles and presets
+    try:
+        from hlpr.cli.presets import get_preset_manager
+        from hlpr.cli.profiles import get_profile_manager
+
+        profile_manager = get_profile_manager()
+        preset_manager = get_preset_manager()
+
+        profiles = profile_manager.list_profiles()
+        presets = preset_manager.list_presets()
+
+        if profiles or presets:
+            console.print("\n[bold blue]Available Resources[/bold blue]")
+            resource_table = create_table("Resources", ["Type", "Count", "Items"])
+            if profiles:
+                profile_names = ", ".join(list(profiles.keys())[:3])
+                if len(profiles) > 3:
+                    profile_names += f" (+{len(profiles) - 3} more)"
+                resource_table.add_row("Profiles", str(len(profiles)), profile_names)
+            if presets:
+                preset_names = ", ".join(list(presets.keys())[:3])
+                if len(presets) > 3:
+                    preset_names += f" (+{len(presets) - 3} more)"
+                resource_table.add_row("Presets", str(len(presets)), preset_names)
+            console.print(resource_table)
+
+    except Exception as e:
+        if verbose:
+            console.print(f"[red]Resource check failed: {e}[/red]")
+
+    # Health checks
+    if check_health:
+        console.print("\n[bold blue]Health Checks[/bold blue]")
+        health_table = create_table("Health", ["Component", "Status"])
+
+        # Database health
+        try:
+            import asyncio
+            asyncio.run(check_db_health())
+            health_table.add_row("Database", "✅ Connected")
+        except Exception:
+            health_table.add_row("Database", "❌ Failed")
+
+        # Docker health
+        try:
+            from hlpr.cli.executor import get_execution_info
+            info = get_execution_info()
+            if info["docker_available"]:
+                health_table.add_row("Docker", "✅ Available")
+            else:
+                health_table.add_row("Docker", "⚠️ Not available")
+        except Exception:
+            health_table.add_row("Docker", "❌ Check failed")
+
+        console.print(health_table)
+
+    # Quick actions
+    console.print("\n[bold blue]Quick Actions[/bold blue]")
+    console.print("  • Switch profile: [green]hlpr workspace switch <profile>[/green]")
+    console.print("  • Run wizard: [green]hlpr wizard[/green]")
+    console.print("  • View health: [green]hlpr health[/green]")
+
+
+async def check_db_health() -> None:
+    """Check database connectivity."""
+    from sqlalchemy import text
+
+    from hlpr.db.dependencies import get_db
+
+    async for session in get_db():
+        await session.execute(text("SELECT 1"))
+        break
+        break
+
+
+@workspace_app.command("switch")
+def switch_workspace(
+    target: str = typer.Argument(..., help="Profile or environment to switch to"),
+    dry_run: bool = typer.Option(False, "--dry-run", help="Show changes without applying"),
+    verbose: bool = typer.Option(False, "--verbose", "-v", help="Show detailed output"),
+):
+    """Switch to a different workspace profile or environment."""
+    console.print(f"\n[bold green]🔄 Switching workspace to:[/bold green] [bold]{target}[/bold]")
+
+    if dry_run:
+        console.print("[yellow]DRY RUN MODE - No changes will be applied[/yellow]")
+
+    try:
+        # Try to apply as profile first
+        from hlpr.cli.profiles import get_profile_manager
+        manager = get_profile_manager()
+
+        profile = manager.get_profile(target)
+        if profile:
+            console.print(f"Found profile: [blue]{target}[/blue]")
+
+            if verbose:
+                console.print("\n[bold]Profile configuration:[/bold]")
+                profile_dict = profile.model_dump(exclude_unset=True)
+                for key, value in profile_dict.items():
+                    console.print(f"  {key}: {value}")
+
+            if not dry_run:
+                if manager.apply_profile(target):
+                    print_success(f"Successfully switched to profile '{target}'")
+
+                    # Show current status
+                    console.print("\n[bold]Current workspace status:[/bold]")
+                    workspace_status(verbose=False, check_health=False)
+                else:
+                    print_error(f"Failed to apply profile '{target}'")
+            else:
+                console.print("[yellow]Would apply profile configuration[/yellow]")
+
         else:
-            console.print("Use 'hlpr presets create' for non-interactive preset creation")
+            # Try as environment type
+            valid_environments = ["development", "staging", "production", "testing"]
 
-    if target in ["all", "profiles"]:
-        console.print("\n[bold blue]Profile Configuration:[/bold blue]")
-        if interactive:
-            configure_profiles_interactive(wizard)
-        else:
-            console.print("Use 'hlpr profile create' for non-interactive profile creation")
+            if target in valid_environments:
+                console.print(f"Switching to environment: [blue]{target}[/blue]")
 
-    if target in ["all", "environment"]:
-        console.print("\n[bold blue]Environment Configuration:[/bold blue]")
-        if interactive:
-            configure_environment_interactive(wizard)
-        else:
-            console.print("Environment configuration requires interactive mode")
+                # Create or apply environment-specific configuration
+                env_config = get_environment_config(target)
 
-    print_success("Configuration completed!")
+                if verbose:
+                    console.print("\n[bold]Environment configuration:[/bold]")
+                    for key, value in env_config.items():
+                        console.print(f"  {key}: {value}")
+
+                if not dry_run:
+                    # Apply environment configuration
+                    manager.save_profile(f"env-{target}", env_config)
+                    if manager.apply_profile(f"env-{target}"):
+                        print_success(f"Successfully switched to {target} environment")
+                    else:
+                        print_error(f"Failed to apply {target} environment configuration")
+                else:
+                    console.print("[yellow]Would apply environment configuration[/yellow]")
+
+            else:
+                print_error(f"Profile or environment '{target}' not found")
+                console.print("\n[bold]Available options:[/bold]")
+
+                # Show available profiles
+                profiles = manager.list_profiles()
+                if profiles:
+                    console.print("  [bold]Profiles:[/bold]")
+                    for name in profiles.keys():
+                        console.print(f"    • {name}")
+
+                # Show available environments
+                console.print("  [bold]Environments:[/bold]")
+                for env in valid_environments:
+                    console.print(f"    • {env}")
+
+                console.print("\n[yellow]Create a new profile with: hlpr profile create[/yellow]")
+                return
+
+    except Exception as e:
+        print_error(f"Workspace switch failed: {e}")
+        if verbose:
+            console.print(f"[red]Error details: {e}[/red]")
+        raise typer.Exit(1) from e
+
+
+def get_environment_config(environment: str) -> dict[str, Any]:
+    """Get default configuration for an environment type."""
+    configs = {
+        "development": {
+            "environment": "development",
+            "model": "ollama/gemma3",
+            "optimizer": "bootstrap",
+            "iters": 2,
+            "debug": True,
+            "auto_fallback": True,
+            "database_url": "sqlite+aiosqlite:///./hlpr.db"
+        },
+        "staging": {
+            "environment": "staging",
+            "model": "gpt-3.5-turbo",
+            "optimizer": "mipro",
+            "iters": 5,
+            "debug": False,
+            "auto_fallback": True,
+            "database_url": "sqlite+aiosqlite:///./hlpr.db"
+        },
+        "production": {
+            "environment": "production",
+            "model": "gpt-4",
+            "optimizer": "mipro",
+            "iters": 20,
+            "debug": False,
+            "auto_fallback": False,
+            "database_url": "sqlite+aiosqlite:///./hlpr.db"
+        },
+        "testing": {
+            "environment": "testing",
+            "model": "ollama/gemma3",
+            "optimizer": "bootstrap",
+            "iters": 1,
+            "debug": True,
+            "auto_fallback": True,
+            "database_url": "sqlite+aiosqlite:///./test_hlpr.db"
+        }
+    }
+
+    return configs.get(environment, configs["development"])
 
 
 def configure_presets_interactive(wizard: CommandWizard) -> None:
