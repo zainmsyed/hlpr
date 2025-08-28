@@ -19,7 +19,13 @@ from hlpr.core.errors import DatasetLoadError, ModelConfigurationError, Optimiza
 from hlpr.core.optimization import OptimizationConfig
 
 from .dataset import load_meeting_examples
-from .metrics import list_exact_match, summary_token_overlap, fuzzy_list_match, semantic_similarity_score, summary_quality_score
+from .metrics import (
+    fuzzy_list_match,
+    list_exact_match,
+    semantic_similarity_score,
+    summary_quality_score,
+    summary_token_overlap,
+)
 from .programs import MeetingProgram
 
 logger = logging.getLogger(__name__)
@@ -103,7 +109,7 @@ class MeetingEvaluator:
         if total_weight == 0:
             return sum(scores) / len(scores)
         
-        return sum(score * weight for score, weight in zip(scores, weights)) / total_weight
+        return sum(score * weight for score, weight in zip(scores, weights, strict=False)) / total_weight
     
     def create_metric_function(self) -> Callable[..., float]:
         """Create a metric function for DSPy optimizers."""

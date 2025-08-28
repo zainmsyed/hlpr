@@ -108,6 +108,7 @@ class MeetingSummarizationPipeline:
         
         try:  # pragma: no cover - environment dependent
             import pickle
+
             from hlpr.dspy.programs import MeetingProgram
 
             # Try to load the optimized program from artifacts
