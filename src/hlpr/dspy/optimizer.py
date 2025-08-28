@@ -166,7 +166,7 @@ def configure_model(model: str | None = None) -> None:
             configure_openai_model(model)
     except Exception as e:
         logger.error(f"Model configuration failed: {e}")
-        raise ModelConfigurationError(f"Failed to configure model {model}: {e}")
+        raise ModelConfigurationError(f"Failed to configure model {model}: {e}") from e
 
 def get_default_model() -> str:
     """Get default model based on environment."""

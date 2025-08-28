@@ -10,7 +10,7 @@ from hlpr.cli.base import app
 
 @app.command("workflow")
 def run_workflow(
-    workflow_name: str = typer.Argument(..., help="Name of the workflow to run"),
+    workflow_name: str | None = typer.Argument(None, help="Name of the workflow to run"),
     dry_run: bool = typer.Option(False, "--dry-run", help="Show steps without executing"),
     verbose: bool = typer.Option(False, "--verbose", "-v", help="Show detailed output"),
     list_workflows: bool = typer.Option(False, "--list", "-l", help="List all available workflows"),

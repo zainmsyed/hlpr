@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import typer
-from typer import Choice  # type: ignore[attr-defined]
 
 from hlpr.cli.base import app, print_info, print_success
 

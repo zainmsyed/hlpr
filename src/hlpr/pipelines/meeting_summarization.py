@@ -148,7 +148,8 @@ class MeetingSummarizationPipeline:
                 dspy_out = self._dspy_program(transcript=transcript)
                 summary = dspy_out.get("summary") or ""
                 action_items = [{"task": t} for t in dspy_out.get("action_items", [])]
-                decisions: list[dict[str, str]] = []  # signature not yet integrated
+                # Always use heuristic for decisions since DSPy signature not yet integrated
+                _, decisions = self.extractor.extract(transcript)
             except Exception:  # fallback to heuristic
                 action_items, decisions = self.extractor.extract(transcript)
                 summary = self.extractor.summarize(transcript)
