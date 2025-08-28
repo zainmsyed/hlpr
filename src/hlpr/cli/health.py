@@ -5,7 +5,7 @@ from hlpr.cli.base import app, console, create_table
 from hlpr.core.settings import get_settings
 
 
-@app.command("health")
+@app.command("health")  # type: ignore[misc]
 def health() -> None:
     """Show basic health / config info."""
     settings = get_settings()
@@ -16,7 +16,7 @@ def health() -> None:
     console.print(table)
 
 
-@app.command("env-info")
+@app.command("env-info")  # type: ignore[misc]
 def env_info() -> None:
     """Show detailed information about the current execution environment."""
     from hlpr.cli.executor import get_execution_info

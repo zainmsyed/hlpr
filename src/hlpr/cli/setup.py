@@ -6,7 +6,7 @@ import typer
 from hlpr.cli.base import app, print_info, print_success
 
 
-@app.command("setup")
+@app.command("setup")  # type: ignore[misc]
 def setup_wizard() -> None:
     """Interactive setup wizard for first-time configuration."""
     from pathlib import Path

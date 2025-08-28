@@ -6,7 +6,7 @@ import typer
 from hlpr.cli.base import app, console
 
 
-@app.command("optimize-meeting")
+@app.command("optimize-meeting")  # type: ignore[misc]
 def optimize_meeting(
     data_path: str = typer.Option(
         "documents/training-data/meetings.txt", help="Path to meeting dataset (JSONL)"
@@ -73,7 +73,7 @@ def optimize_meeting(
         raise typer.Exit(1) from None
 
 
-@app.command("train")
+@app.command("train")  # type: ignore[misc]
 def train(
     preset: str = typer.Option("quick", help="Preset configuration to use (quick, development, production, experimental)"),
     iters: int | None = typer.Option(None, help="Override number of optimization iterations"),

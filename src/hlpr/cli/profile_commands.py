@@ -6,7 +6,7 @@ import typer
 from hlpr.cli.base import app, console, create_table, print_error, print_success
 
 
-@app.command("profile")
+@app.command("profile")  # type: ignore[misc]
 def manage_profiles(
     action: str = typer.Argument("list", help="Action: list, show, apply, create"),
     name: str | None = typer.Option(None, help="Profile name for show/apply actions"),

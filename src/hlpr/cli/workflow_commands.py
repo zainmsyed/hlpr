@@ -8,7 +8,7 @@ import typer
 from hlpr.cli.base import app
 
 
-@app.command("workflow")
+@app.command("workflow")  # type: ignore[misc]
 def run_workflow(
     workflow_name: str | None = typer.Argument(None, help="Name of the workflow to run"),
     dry_run: bool = typer.Option(False, "--dry-run", help="Show steps without executing"),
@@ -28,7 +28,7 @@ def run_workflow(
         raise typer.Exit(1)
 
 
-@app.command("chain")
+@app.command("chain")  # type: ignore[misc]
 def run_command_chain(
     commands: Annotated[list[str], typer.Argument(help="Commands to run in sequence")],
     dry_run: bool = typer.Option(False, "--dry-run", help="Show commands without executing"),

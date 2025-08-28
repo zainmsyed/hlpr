@@ -13,14 +13,14 @@ workspace_app = typer.Typer(help="Manage hlpr workspaces")
 app.add_typer(workspace_app, name="workspace")
 
 
-@app.command("wizard")
+@app.command("wizard")  # type: ignore[misc]
 def run_wizard() -> None:
     """Interactive command builder wizard."""
     from hlpr.cli.wizard import run_wizard as wizard_run
     wizard_run()
 
 
-@app.command("setup")
+@app.command("setup")  # type: ignore[misc]
 def setup_environment(
     force: bool = typer.Option(False, "--force", "-f", help="Force re-setup even if already configured"),
     skip_docker: bool = typer.Option(False, "--skip-docker", help="Skip Docker setup"),

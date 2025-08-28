@@ -6,7 +6,7 @@ import typer
 from hlpr.cli.base import app, console
 
 
-@app.command("summarize")
+@app.command("summarize")  # type: ignore[misc]
 def summarize(document_id: int) -> None:  # pragma: no cover - IO heavy
     """Summarize a document by its ID using the summarization pipeline."""
     import asyncio
@@ -29,7 +29,7 @@ def summarize(document_id: int) -> None:  # pragma: no cover - IO heavy
     asyncio.run(_run())
 
 
-@app.command("quick-meeting")
+@app.command("quick-meeting")  # type: ignore[misc]
 def quick_meeting(
     meeting_id: int,
     preset: str = typer.Option("default", help="Output preset (default, detailed, minimal)"),

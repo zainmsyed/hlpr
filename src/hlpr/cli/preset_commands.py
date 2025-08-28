@@ -6,7 +6,7 @@ import typer
 from hlpr.cli.base import app, console, create_table, print_error
 
 
-@app.command("presets")
+@app.command("presets")  # type: ignore[misc]
 def manage_presets(
     action: str = typer.Argument("list", help="Action: list, create, show"),
     name: str | None = typer.Option(None, help="Preset name for create/show actions"),

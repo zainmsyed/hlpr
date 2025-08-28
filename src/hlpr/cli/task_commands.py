@@ -6,7 +6,7 @@ import typer
 from hlpr.cli.base import app, print_error
 
 
-@app.command("task")
+@app.command("task")  # type: ignore[misc]
 def run_task(
     task_name: str | None = typer.Argument(None, help="Name of the task to run"),
     dry_run: bool = typer.Option(False, "--dry-run", help="Show commands without executing"),
