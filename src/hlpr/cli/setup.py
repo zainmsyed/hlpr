@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import typer
+from typer import Choice  # type: ignore[attr-defined]
 
 from hlpr.cli.base import app, print_info, print_success
 
@@ -26,7 +27,7 @@ def setup_wizard() -> None:
     # Detect environment
     env_type = typer.prompt(
         "What type of environment are you setting up?",
-        type=typer.Choice(["development", "production", "testing"]),
+        type=typer.Choice(["development", "production", "testing"]),  # type: ignore[attr-defined]
         default="development"
     )
 

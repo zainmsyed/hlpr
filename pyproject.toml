@@ -35,6 +35,7 @@ dev = [
     "mypy>=1.17.1",
     "pytest>=8.4.1",
     "pytest-asyncio>=1.1.0",
+    "types-requests>=2.32.4.20250809",
 ]
 config = [
     "tomli>=2.0.0; python_version < '3.11'",

@@ -34,13 +34,13 @@ logger = logging.getLogger(__name__)
 class MeetingEvaluator:
     """Centralized evaluation for meeting optimization."""
     
-    def __init__(self, metrics: list[str] = None, use_enhanced: bool = True):
+    def __init__(self, metrics: list[str] | None = None, use_enhanced: bool = True):
         self.metrics = metrics or ["summary_f1", "action_f1"]
         self.use_enhanced = use_enhanced
     
-    def evaluate(self, program, examples: list[Any]) -> dict[str, float]:
+    def evaluate(self, program: Any, examples: list[Any]) -> dict[str, float]:
         """Evaluate program on examples with all configured metrics."""
-        results = {}
+        results: dict[str, list[float]] = {}
         
         for example in examples:
             pred = program(transcript=example.transcript)
@@ -195,7 +195,7 @@ def is_ollama_available() -> bool:
     try:
         import requests
         response = requests.get("http://localhost:11434/api/tags", timeout=2)
-        return response.status_code == 200
+        return bool(response.status_code == 200)
     except Exception:
         return False
 

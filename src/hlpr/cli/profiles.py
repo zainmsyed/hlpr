@@ -185,7 +185,7 @@ class ProfileManager:
                 f.write("# hlpr profiles configuration\n\n")
                 f.write("[profiles]\n\n")
                 for profile_name, profile_data in existing_data["profiles"].items():
-                    f.write(f'[{profile_name}]\n')
+                    f.write(f'[profiles.{profile_name}]\n')
                     for key, value in profile_data.items():
                         if isinstance(value, str):
                             f.write(f'{key} = "{value}"\n')
