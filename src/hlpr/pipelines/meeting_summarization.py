@@ -119,19 +119,19 @@ class MeetingSummarizationPipeline:
         try:  # pragma: no cover - environment dependent
             import dspy
 
+            from hlpr.dspy.signatures import ExtractActionItems, MeetingSummary
+
             # Check if we have a saved program path
             program_path = self._optimized_artifact.get("program_path")
             if program_path and Path(program_path).exists():
                 # Load the optimized program
-                from hlpr.dspy.signatures import ExtractActionItems, MeetingSummary
-
-                class _Prog(dspy.Module):  # type: ignore[misc]
+                class _Prog(dspy.Module):
                     def __init__(self) -> None:
                         super().__init__()
                         self.summarizer = dspy.ChainOfThought(MeetingSummary)
                         self.action_items = dspy.ChainOfThought(ExtractActionItems)
 
-                    def forward(self, transcript: str) -> dict[str, Any]:  # type: ignore[override]
+                    def forward(self, transcript: str) -> dict[str, Any]:
                         s = self.summarizer(transcript=transcript).summary
                         a = self.action_items(transcript=transcript).action_items
                         return {"summary": s, "action_items": a}
@@ -141,15 +141,13 @@ class MeetingSummarizationPipeline:
                 return program
             else:
                 # Fallback to default program if no saved program available
-                from hlpr.dspy.signatures import ExtractActionItems, MeetingSummary
-
-                class _Prog(dspy.Module):  # type: ignore[misc]
+                class _Prog(dspy.Module):
                     def __init__(self) -> None:
                         super().__init__()
                         self.summarizer = dspy.ChainOfThought(MeetingSummary)
                         self.action_items = dspy.ChainOfThought(ExtractActionItems)
 
-                    def forward(self, transcript: str) -> dict[str, Any]:  # type: ignore[override]
+                    def forward(self, transcript: str) -> dict[str, Any]:
                         s = self.summarizer(transcript=transcript).summary
                         a = self.action_items(transcript=transcript).action_items
                         return {"summary": s, "action_items": a}

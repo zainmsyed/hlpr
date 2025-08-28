@@ -50,6 +50,45 @@ docker compose up -d
 
 Then open http://localhost:8000 or http://localhost:8000/docs in your browser.
 
+### Development Scripts
+The project includes several helper scripts to simplify development:
+
+#### Initial Setup
+```bash
+# Run the initial setup (installs dependencies, starts Docker, initializes DB)
+./scripts/setup.sh
+```
+
+#### Development Workflow
+```bash
+# Start development environment
+./scripts/dev.sh start
+
+# View logs
+./scripts/dev.sh logs
+
+# Access container shell
+./scripts/dev.sh shell
+
+# Stop development environment
+./scripts/dev.sh stop
+
+# Clean up everything (containers, volumes, images)
+./scripts/dev.sh clean
+
+# Get help on all available commands
+./scripts/dev.sh help
+```
+
+#### Smart Command Execution
+The `docker-exec.sh` script automatically detects whether you're running inside Docker or locally and routes commands appropriately:
+
+```bash
+# These commands work the same whether in Docker or local
+./scripts/docker-exec.sh uv run hlpr health
+./scripts/docker-exec.sh uv run hlpr optimize-meeting --iters 1
+```
+
 ### Run the API (dev)
 ```bash
 uv run uvicorn hlpr.main:app --reload

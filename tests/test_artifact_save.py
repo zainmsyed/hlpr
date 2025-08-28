@@ -14,6 +14,7 @@ def test_dspy_save():
     """Test DSPy program saving functionality."""
     try:
         import dspy
+
         from hlpr.dspy.signatures import ExtractActionItems, MeetingSummary
         
         print("🔧 Setting up DSPy...")

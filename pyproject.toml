@@ -1,3 +1,7 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
 [project]
 name = "hlpr"
 version = "0.1.0"
@@ -7,7 +11,6 @@ requires-python = ">=3.13"
 dependencies = [
     "dspy>=3.0.2",
     "fastapi>=0.116.1",
-    "httpx>=0.28.1",
     "pydantic>=2.11.7",
     "pydantic-settings>=2.10.1",
     "rich>=14.1.0",
@@ -17,6 +20,7 @@ dependencies = [
     "asyncpg>=0.30.0",
     "pgvector>=0.4.1",
     "aiosqlite>=0.21.0",
+    "python-dotenv>=1.1.1",
 ]
 
 [tool.setuptools]
@@ -30,6 +34,10 @@ dev = [
     "mypy>=1.17.1",
     "pytest>=8.4.1",
     "pytest-asyncio>=1.1.0",
+]
+config = [
+    "tomli>=2.0.0; python_version < '3.11'",
+    "tomli-w>=1.0.0",
 ]
 
 [tool.ruff]
@@ -56,4 +64,4 @@ ignore_missing_imports = true  # Temporarily for third-party libs without stubs 
 exclude = ["tests/.*"]
 
 [project.scripts]
-hlpr = "hlpr.cli:app_cli"
+hlpr = "hlpr.cli:app"

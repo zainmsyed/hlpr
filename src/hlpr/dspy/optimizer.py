@@ -8,11 +8,10 @@ from __future__ import annotations
 import json
 import logging
 import time
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Literal
-
-logger = logging.getLogger(__name__)
 
 import dspy
 from dspy.teleprompt import COPRO, BootstrapFewShot, BootstrapFewShotWithRandomSearch, MIPROv2
@@ -20,6 +19,8 @@ from dspy.teleprompt import COPRO, BootstrapFewShot, BootstrapFewShotWithRandomS
 from .dataset import load_meeting_examples
 from .metrics import list_exact_match, summary_token_overlap
 from .signatures import ExtractActionItems, MeetingSummary
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass(slots=True)
@@ -76,7 +77,7 @@ class MeetingProgram(dspy.Module):  # type: ignore[misc]
         return {"summary": summary, "action_items": actions}
 
 
-def _convert_to_dspy_examples(meeting_examples: list) -> list[dspy.Example]:
+def _convert_to_dspy_examples(meeting_examples: list[Any]) -> list[dspy.Example]:
     """Convert MeetingExample objects to DSPy Example format."""
     dspy_examples = []
     
@@ -93,9 +94,9 @@ def _convert_to_dspy_examples(meeting_examples: list) -> list[dspy.Example]:
     return dspy_examples
 
 
-def _create_metric() -> callable:
+def _create_metric() -> Callable[..., float]:
     """Create a composite metric for evaluation."""
-    def meeting_metric(gold, pred, trace=None):
+    def meeting_metric(gold: Any, pred: Any, trace: Any = None) -> float:
         # Handle different gold formats
         if hasattr(gold, 'summary') and hasattr(gold, 'action_items'):
             gold_summary = gold.summary
@@ -126,7 +127,7 @@ def _create_metric() -> callable:
     return meeting_metric
 
 
-def _optimize_with_mipro(program: MeetingProgram, trainset: list, valset: list, config: OptimizerConfig) -> tuple[Any, dict]:
+def _optimize_with_mipro(program: MeetingProgram, trainset: list[dspy.Example], valset: list[dspy.Example], config: OptimizerConfig) -> tuple[Any, dict[str, Any]]:
     """Optimize using MIPROv2."""
     print("🔧 Starting MIPROv2 optimization...")
     
@@ -157,7 +158,7 @@ def _optimize_with_mipro(program: MeetingProgram, trainset: list, valset: list, 
     return optimized_program, results
 
 
-def _optimize_with_copro(program: MeetingProgram, trainset: list, config: OptimizerConfig) -> tuple[Any, dict]:
+def _optimize_with_copro(program: MeetingProgram, trainset: list[dspy.Example], config: OptimizerConfig) -> tuple[Any, dict[str, Any]]:
     """Optimize using COPRO (Collaborative Prompt Optimization)."""
     print("🔧 Starting COPRO optimization...")
     
@@ -185,7 +186,7 @@ def _optimize_with_copro(program: MeetingProgram, trainset: list, config: Optimi
     return optimized_program, results
 
 
-def _optimize_with_bootstrap(program: MeetingProgram, trainset: list, config: OptimizerConfig, random_search: bool = False) -> tuple[Any, dict]:
+def _optimize_with_bootstrap(program: MeetingProgram, trainset: list[dspy.Example], config: OptimizerConfig, random_search: bool = False) -> tuple[Any, dict[str, Any]]:
     """Optimize using BootstrapFewShot or BootstrapFewShotWithRandomSearch."""
     optimizer_name = "bootstrap_random" if random_search else "bootstrap"
     print(f"🔧 Starting {optimizer_name} optimization...")
@@ -221,7 +222,7 @@ def _optimize_with_bootstrap(program: MeetingProgram, trainset: list, config: Op
     return optimized_program, results
 
 
-def _evaluate_program(program: Any, examples: list) -> dict[str, float]:
+def _evaluate_program(program: Any, examples: list[Any]) -> dict[str, float]:
     """Evaluate the optimized program on examples."""
     print("📊 Evaluating optimized program...")
     
@@ -322,7 +323,7 @@ def optimize(config: OptimizerConfig) -> dict[str, Any]:
     artifact_path = artifact_dir / "optimized_program.json"
     
     # Save the DSPy program using dspy.save()
-    program_path = artifact_dir / "optimized_program_dspy"
+    program_path: Path | None = artifact_dir / "optimized_program_dspy"
     print(f"🔧 DEBUG: Attempting to save DSPy program to {program_path}")
     try:
         optimized_program.save(str(program_path), save_program=True)

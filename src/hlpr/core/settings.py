@@ -17,7 +17,9 @@ class Settings(BaseSettings):
 
     class Config:
         env_prefix = "HLPR_"
-        case_sensitive = False
+        env_file = ".env"
+        env_file_encoding = "utf-8"
+        extra = "ignore"  # Ignore extra fields from .env file
 
 
 @lru_cache(maxsize=1)
