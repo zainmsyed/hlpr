@@ -34,6 +34,10 @@ __pypackages__/
 *.log
 pip-selfcheck.json
 
+# DSPy artifacts and optimization results
+artifacts/
+test_artifacts/
+
 # UV lock artifacts (if generated)
 uv.lock
 
