@@ -21,6 +21,7 @@ dependencies = [
     "pgvector>=0.4.1",
     "aiosqlite>=0.21.0",
     "python-dotenv>=1.1.1",
+    "types-pyyaml>=6.0.12.20250822",
 ]
 
 [tool.setuptools]

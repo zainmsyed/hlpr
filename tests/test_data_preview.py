@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Quick test to show what training data will be used for optimization."""
 
-from src.hlpr.dspy.dataset import load_meeting_examples
+from hlpr.dspy.dataset import load_meeting_examples
 
 
 def main():

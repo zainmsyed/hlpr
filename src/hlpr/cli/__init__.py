@@ -4,5 +4,3 @@ from hlpr.cli import development, meeting, training, workspace  # noqa: F401
 from hlpr.cli.base import app
 
 __all__ = ["app", "development", "meeting", "training", "workspace"]
-
-__all__ = ["app"]

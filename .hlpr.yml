@@ -1,0 +1,40 @@
+presets:
+  quick:
+    optimizer: bootstrap
+    iters: 1
+    model: ollama/gemma3
+    include_unverified: false
+    max_bootstrapped_demos: 2
+    max_labeled_demos: 4
+
+  development:
+    optimizer: bootstrap
+    iters: 2
+    model: ollama/gemma3
+    include_unverified: true
+    max_bootstrapped_demos: 4
+    max_labeled_demos: 8
+
+  production:
+    optimizer: mipro
+    iters: 10
+    model: gpt-4
+    include_unverified: false
+    max_bootstrapped_demos: 8
+    max_labeled_demos: 32
+
+  experimental:
+    optimizer: mipro
+    iters: 5
+    model: gpt-3.5-turbo
+    include_unverified: true
+    max_bootstrapped_demos: 4
+    max_labeled_demos: 16
+
+  fast:
+    optimizer: bootstrap
+    iters: 1
+    model: ollama/gemma3
+    include_unverified: false
+    max_bootstrapped_demos: 1
+    max_labeled_demos: 2
