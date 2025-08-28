@@ -7,7 +7,7 @@ from typing import Any
 import yaml
 from pydantic import BaseModel, Field
 
-from hlpr.cli.base import print_error, print_info, print_success
+from hlpr.cli.base import SmartCLIError, print_error, print_info, print_success
 
 
 class PresetConfig(BaseModel):
@@ -208,7 +208,19 @@ def apply_preset_to_args(preset_name: str, base_args: dict[str, Any]) -> dict[st
     preset = manager.get_preset(preset_name)
 
     if not preset:
-        print_error(f"Preset '{preset_name}' not found")
+        available = list(manager.list_presets().keys()) if hasattr(manager, 'list_presets') else []
+        suggestions = [
+            f"Use 'hlpr presets show {available[0]}' to see available presets" if available else "Create a preset first",
+            "Run 'hlpr presets list' to see all available presets",
+            "Use 'hlpr wizard' to create presets interactively",
+            "Create presets manually by editing ~/.hlpr/presets.yml"
+        ]
+        SmartCLIError(
+            f"Preset '{preset_name}' not found",
+            suggestions=suggestions,
+            error_code="PRESET_NOT_FOUND",
+            help_url="https://docs.hlpr.dev/presets"
+        ).display()
         return base_args
 
     print_info(f"Applying preset '{preset_name}'")

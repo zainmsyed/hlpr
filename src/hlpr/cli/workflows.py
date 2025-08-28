@@ -5,7 +5,7 @@ import subprocess
 import time
 from typing import Any
 
-from hlpr.cli.base import console, print_error, print_info, print_success
+from hlpr.cli.base import SmartCLIError, console, print_error, print_info, print_success
 from hlpr.cli.executor import smart_execute
 
 
@@ -143,9 +143,18 @@ class WorkflowManager:
             True if successful, False otherwise
         """
         if name not in self.workflows:
-            print_error(f"Workflow '{name}' not found")
-            available = ", ".join(sorted(self.workflows.keys()))
-            print_info(f"Available workflows: {available}")
+            available = sorted(self.workflows.keys())
+            suggestions = [
+                f"Use 'hlpr workflow {available[0]}' for a quick start" if available else "Create a custom workflow",
+                "Run 'hlpr workflow --list' to see all available workflows",
+                "Use 'hlpr wizard' to build commands interactively"
+            ]
+            SmartCLIError(
+                f"Workflow '{name}' not found",
+                suggestions=suggestions,
+                error_code="WORKFLOW_NOT_FOUND",
+                help_url="https://docs.hlpr.dev/workflows"
+            ).display()
             return False
 
         workflow = self.workflows[name]

@@ -8,7 +8,7 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
-from hlpr.cli.base import print_error, print_info, print_success
+from hlpr.cli.base import SmartCLIError, print_error, print_info, print_success
 
 
 class ProfileConfig(BaseModel):
@@ -218,7 +218,19 @@ class ProfileManager:
         """
         profile = self.get_profile(name)
         if not profile:
-            print_error(f"Profile '{name}' not found")
+            available = list(self.list_profiles().keys()) if hasattr(self, 'list_profiles') else []
+            suggestions = [
+                f"Use 'hlpr profile apply {available[0]}' to apply available profiles" if available else "Create a profile first",
+                "Run 'hlpr profile list' to see all available profiles",
+                "Use 'hlpr configure profiles' to create profiles interactively",
+                "Create profiles manually by editing ~/.hlpr/profiles.toml"
+            ]
+            SmartCLIError(
+                f"Profile '{name}' not found",
+                suggestions=suggestions,
+                error_code="PROFILE_NOT_FOUND",
+                help_url="https://docs.hlpr.dev/profiles"
+            ).display()
             return {}
 
         print_info(f"Applying profile '{name}'")

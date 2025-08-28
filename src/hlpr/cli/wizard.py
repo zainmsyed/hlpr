@@ -1,6 +1,7 @@
 """Interactive command builder and wizards."""
 from __future__ import annotations
 
+from collections.abc import Callable
 from typing import Any
 
 from hlpr.cli.base import console, print_error, print_info
@@ -11,6 +12,36 @@ class CommandWizard:
 
     def __init__(self) -> None:
         self.config: dict[str, Any] = {}
+
+    def _validate_positive_int(self, value: str) -> str:
+        """Validate that a string represents a positive integer."""
+        try:
+            int_val = int(value)
+            if int_val <= 0:
+                raise ValueError("Must be a positive integer")
+            return value
+        except ValueError as e:
+            if "invalid literal" in str(e):
+                raise ValueError("Must be a valid integer") from e
+            raise
+
+    def _validate_non_negative_int(self, value: str) -> str:
+        """Validate that a string represents a non-negative integer."""
+        try:
+            int_val = int(value)
+            if int_val < 0:
+                raise ValueError("Must be a non-negative integer")
+            return value
+        except ValueError as e:
+            if "invalid literal" in str(e):
+                raise ValueError("Must be a valid integer") from e
+            raise
+
+    def _validate_non_empty(self, value: str) -> str:
+        """Validate that a string is not empty."""
+        if not value.strip():
+            raise ValueError("Value cannot be empty")
+        return value
 
     def prompt_choice(self, message: str, choices: list[str], default: str | None = None) -> str:
         """Prompt user to choose from a list of options."""
@@ -36,7 +67,7 @@ class CommandWizard:
 
             print_error(f"Please enter a number between 1 and {len(choices)}")
 
-    def prompt_input(self, message: str, default: str | None = None, validator: callable | None = None) -> str:
+    def prompt_input(self, message: str, default: str | None = None, validator: Callable[[str], str] | None = None) -> str:
         """Prompt user for input with optional validation."""
         while True:
             if default:
@@ -104,7 +135,7 @@ class CommandWizard:
             iters = self.prompt_input(
                 "Number of optimization iterations",
                 "5",
-                lambda x: int(x) > 0 or (_ for _ in ()).throw(ValueError("Must be a positive integer"))
+                self._validate_positive_int
             )
 
             include_unverified = self.prompt_yes_no(
@@ -115,13 +146,13 @@ class CommandWizard:
             max_bootstrapped = self.prompt_input(
                 "Maximum bootstrapped demonstrations",
                 "4",
-                lambda x: int(x) >= 0 or (_ for _ in ()).throw(ValueError("Must be a non-negative integer"))
+                self._validate_non_negative_int
             )
 
             max_labeled = self.prompt_input(
                 "Maximum labeled demonstrations",
                 "16",
-                lambda x: int(x) >= 0 or (_ for _ in ()).throw(ValueError("Must be a non-negative integer"))
+                self._validate_non_negative_int
             )
 
             command = f"hlpr optimize-meeting --model {model} --optimizer {optimizer} --iters {iters}"
@@ -149,7 +180,7 @@ class CommandWizard:
 
         meeting_id = self.prompt_input(
             "Enter meeting ID",
-            validator=lambda x: x.strip() or (_ for _ in ()).throw(ValueError("Meeting ID cannot be empty"))
+            validator=self._validate_non_empty
         )
 
         preset = self.prompt_choice(

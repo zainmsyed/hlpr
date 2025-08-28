@@ -4,7 +4,7 @@ from __future__ import annotations
 import subprocess
 from typing import Any
 
-from hlpr.cli.base import console, print_error, print_info, print_success
+from hlpr.cli.base import SmartCLIError, console, print_error, print_info, print_success
 
 
 class TaskRunner:
@@ -143,9 +143,19 @@ class TaskRunner:
             True if successful, False otherwise
         """
         if name not in self.tasks:
-            print_error(f"Task '{name}' not found")
-            available = ", ".join(sorted(self.tasks.keys()))
-            print_info(f"Available tasks: {available}")
+            available = sorted(self.tasks.keys())
+            suggestions = [
+                f"Try 'hlpr task {available[0]}' for common tasks" if available else "No tasks available",
+                "Run 'hlpr task --list' to see all available tasks",
+                "Use 'hlpr wizard' to build commands interactively",
+                "Create custom tasks with 'hlpr task create'"
+            ]
+            SmartCLIError(
+                f"Task '{name}' not found",
+                suggestions=suggestions,
+                error_code="TASK_NOT_FOUND",
+                help_url="https://docs.hlpr.dev/tasks"
+            ).display()
             return False
 
         task = self.tasks[name]
