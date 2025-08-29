@@ -14,6 +14,15 @@ class Settings(BaseSettings):
         description="SQLAlchemy database URL (async). Use postgres+asyncpg://user:pass@host:5432/db",
     )
     sql_echo: bool = Field(default=False, description="Enable SQLAlchemy echo for debugging")
+    
+    # Redis Configuration
+    redis_url: str = Field(
+        default="redis://localhost:6379",
+        description="Redis connection URL"
+    )
+    redis_db: int = Field(default=0, description="Redis database number")
+    redis_cache_ttl: int = Field(default=3600, description="Cache TTL in seconds")
+    redis_session_ttl: int = Field(default=86400, description="Session TTL in seconds (24 hours)")
 
     model_config = SettingsConfigDict(
         env_prefix="HLPR_",

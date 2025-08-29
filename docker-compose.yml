@@ -10,11 +10,19 @@ services:
       POSTGRES_DB: hlpr
     volumes:
       - db_data:/var/lib/postgresql/data
+  # Redis service for caching, sessions, and task queues
+  redis:
+    image: redis:8.2.1-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U hlpr"]
+      test: ["CMD", "redis-cli", "ping"]
       interval: 5s
-      timeout: 5s
+      timeout: 3s
       retries: 5
+    command: redis-server --appendonly yes --requirepass ""
 
   app:
     build:
@@ -44,4 +52,5 @@ services:
 # Define named volumes
 volumes:
   db_data: {}
+  redis_data: {}  # Volume for Redis persistence
   artifacts_data: {}  # Volume for persisting optimization artifacts
