@@ -1,7 +1,7 @@
 """ORM models for core entities."""
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import UTC, datetime
 
 from sqlalchemy import DateTime, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
@@ -16,7 +16,7 @@ class Document(Base):
     project_id: Mapped[int] = mapped_column(Integer, index=True)
     title: Mapped[str] = mapped_column(String(200))
     content: Mapped[str] = mapped_column(Text)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(UTC))
 
 
 class PipelineRun(Base):
@@ -27,7 +27,7 @@ class PipelineRun(Base):
     input_ref: Mapped[str] = mapped_column(String(200))
     status: Mapped[str] = mapped_column(String(50), default="started")
     output_json: Mapped[str | None] = mapped_column(Text, nullable=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(UTC))
 
 
 class Meeting(Base):
@@ -38,4 +38,4 @@ class Meeting(Base):
     title: Mapped[str] = mapped_column(String(200))
     transcript: Mapped[str] = mapped_column(Text)
     participants: Mapped[str | None] = mapped_column(Text, nullable=True)  # simple CSV for Phase 1
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(UTC))

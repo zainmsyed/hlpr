@@ -2,7 +2,7 @@
 from functools import lru_cache
 
 from pydantic import Field
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
@@ -15,11 +15,12 @@ class Settings(BaseSettings):
     )
     sql_echo: bool = Field(default=False, description="Enable SQLAlchemy echo for debugging")
 
-    class Config:
-        env_prefix = "HLPR_"
-        env_file = ".env"
-        env_file_encoding = "utf-8"
-        extra = "ignore"  # Ignore extra fields from .env file
+    model_config = SettingsConfigDict(
+        env_prefix="HLPR_",
+        env_file=".env",
+        env_file_encoding="utf-8",
+        extra="ignore",  # Ignore extra fields from .env file
+    )
 
 
 @lru_cache(maxsize=1)
