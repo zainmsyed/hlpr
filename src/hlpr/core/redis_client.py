@@ -46,7 +46,7 @@ async def test_redis_connection() -> bool:
         return False
 
 
-async def close_redis_connection():
+async def close_redis_connection() -> None:
     """Close Redis connection pool."""
     global _redis_pool
 
@@ -60,22 +60,26 @@ async def close_redis_connection():
 async def redis_get(key: str) -> str | None:
     """Get a value from Redis."""
     client = await get_redis_client()
-    return await client.get(key)
+    result = await client.get(key)
+    return result.decode('utf-8') if result else None
 
 
 async def redis_set(key: str, value: Any, ttl: int | None = None) -> bool:
     """Set a value in Redis with optional TTL."""
     client = await get_redis_client()
-    return await client.set(key, value, ex=ttl)
+    result = await client.set(key, value, ex=ttl)
+    return bool(result)
 
 
 async def redis_delete(key: str) -> int:
     """Delete a key from Redis."""
     client = await get_redis_client()
-    return await client.delete(key)
+    result = await client.delete(key)
+    return int(result)
 
 
 async def redis_exists(key: str) -> bool:
     """Check if a key exists in Redis."""
     client = await get_redis_client()
-    return await client.exists(key) == 1
+    result = await client.exists(key)
+    return bool(result == 1)

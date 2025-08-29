@@ -49,6 +49,31 @@ services:
     # Rely on image CMD (uv run hlpr run-server) instead of direct uvicorn
     # Remove custom command to use Dockerfile default
 
+  # Celery worker service for background task processing
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      - PYTHONUNBUFFERED=1
+      - HLPR_DATABASE_URL=postgresql+asyncpg://hlpr:hlprpass@db:5432/hlpr
+      - HLPR_REDIS_URL=redis://redis:6379
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+    env_file:
+      - .env
+    volumes:
+      - artifacts_data:/app/artifacts
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    command: celery -A hlpr.tasks.worker worker --loglevel=info --concurrency=2 --pool=prefork
+    restart: unless-stopped
+
 # Define named volumes
 volumes:
   db_data: {}

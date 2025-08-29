@@ -137,11 +137,28 @@ class MeetingSummarizationPipeline:
         if self._dspy_program is not None:
             try:
                 import dspy
-                # Configure with default model if not already configured
+
+                from hlpr.services.circuit_breaker import (
+                    CircuitBreakerProtectedLM,
+                    get_ollama_circuit_breaker,
+                )
+
+                # Configure with circuit breaker-protected model if not already configured
                 if not hasattr(dspy, '_lm') or dspy._lm is None:
-                    dspy.configure(lm=dspy.LM('ollama/gemma3', api_base='http://localhost:11434'))
+                    circuit_breaker = get_ollama_circuit_breaker()
+                    lm = CircuitBreakerProtectedLM(
+                        model='ollama/gemma3',
+                        api_base='http://localhost:11434',
+                        circuit_breaker=circuit_breaker
+                    )
+                    dspy.configure(lm=lm)
             except Exception as e:
-                logger.warning(f"Failed to configure DSPy LM: {e}")
+                logger.warning(f"Failed to configure circuit breaker-protected DSPy LM: {e}")
+                # Fallback to regular configuration
+                try:
+                    dspy.configure(lm=dspy.LM('ollama/gemma3', api_base='http://localhost:11434'))
+                except Exception as fallback_e:
+                    logger.warning(f"Fallback DSPy configuration also failed: {fallback_e}")
         
         if self._dspy_program is not None:
             try:

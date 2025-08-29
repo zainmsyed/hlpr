@@ -1,17 +1,17 @@
 #!/usr/bin/env python3
 """Test script for Redis integration."""
 import asyncio
-import sys
 import logging
+import sys
 from pathlib import Path
-
-# Configure logging to see error messages
-logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
 
 # Add src to path
 sys.path.insert(0, str(Path(__file__).parent / "src"))
 
-from hlpr.core.redis_client import test_redis_connection, redis_set, redis_get, redis_delete
+from hlpr.core.redis_client import redis_delete, redis_get, redis_set, test_redis_connection
+
+# Configure logging to see error messages
+logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
 
 
 async def test_redis_operations():

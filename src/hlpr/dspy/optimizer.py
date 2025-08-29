@@ -155,10 +155,17 @@ class MeetingEvaluator:
         return meeting_metric
 
 
+def get_default_model() -> str:
+    """Get default model based on environment."""
+    # Use environment detection from CLI plan
+    if is_ollama_available():
+        return "ollama/gemma3"
+    return "gpt-3.5-turbo"
+
 def configure_model(model: str | None = None) -> None:
     """Configure DSPy model with environment-aware defaults."""
     model = model or get_default_model()
-    
+
     try:
         if model.startswith("ollama/"):
             configure_ollama_model(model)
@@ -168,27 +175,43 @@ def configure_model(model: str | None = None) -> None:
         logger.error(f"Model configuration failed: {e}")
         raise ModelConfigurationError(f"Failed to configure model {model}: {e}") from e
 
-def get_default_model() -> str:
-    """Get default model based on environment."""
-    # Use environment detection from CLI plan
-    if is_ollama_available():
-        return "ollama/gemma3"
-    return "gpt-3.5-turbo"
 
 def configure_ollama_model(model: str) -> None:
     """Configure DSPy for Ollama models."""
+    from hlpr.services.circuit_breaker import CircuitBreakerProtectedLM, get_ollama_circuit_breaker
+
     model_name = model.split("/")[-1]
     api_base = "http://localhost:11434"  # Simplified - no Docker detection
-    
-    lm = dspy.LM(model=f"ollama/{model_name}", api_base=api_base)
+
+    # Get circuit breaker for protection
+    circuit_breaker = get_ollama_circuit_breaker()
+
+    # Create a circuit breaker-protected LM
+    lm = CircuitBreakerProtectedLM(
+        model=f"ollama/{model_name}",
+        api_base=api_base,
+        circuit_breaker=circuit_breaker
+    )
+
     dspy.configure(lm=lm)
-    logger.info(f"Configured DSPy with Ollama model: {model_name} at {api_base}")
+    logger.info(f"Configured DSPy with circuit breaker-protected Ollama model: {model_name}")
+
 
 def configure_openai_model(model: str) -> None:
     """Configure DSPy for OpenAI-compatible models."""
-    lm = dspy.LM(model=model)
+    from hlpr.services.circuit_breaker import CircuitBreakerProtectedLM, get_openai_circuit_breaker
+
+    # Get circuit breaker for protection
+    circuit_breaker = get_openai_circuit_breaker()
+
+    # Create a circuit breaker-protected LM
+    lm = CircuitBreakerProtectedLM(
+        model=model,
+        circuit_breaker=circuit_breaker
+    )
+
     dspy.configure(lm=lm)
-    logger.info(f"Configured DSPy with model: {model}")
+    logger.info(f"Configured DSPy with circuit breaker-protected model: {model}")
 
 def is_ollama_available() -> bool:
     """Check if Ollama is available (simplified check)."""
