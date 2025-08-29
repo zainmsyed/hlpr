@@ -61,7 +61,8 @@ async def redis_get(key: str) -> str | None:
     """Get a value from Redis."""
     client = await get_redis_client()
     result = await client.get(key)
-    return result.decode('utf-8') if result else None
+    # With decode_responses=True, result is already a string or None
+    return result if isinstance(result, str | type(None)) else str(result)
 
 
 async def redis_set(key: str, value: Any, ttl: int | None = None) -> bool:

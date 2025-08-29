@@ -1,8 +1,9 @@
 """Service layer orchestrating DSPy pipelines with repositories."""
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, cast
 
+from hlpr.core.cache_manager import summarization_cache
 from hlpr.pipelines.interfaces import (
     DocumentRepositoryProtocol,
     MeetingRepositoryProtocol,
@@ -22,8 +23,23 @@ class PipelineService:
         self._runs_repo = runs_repo
 
     async def summarize_document(self, document_id: int) -> dict[str, Any]:
+        # Try to get from cache first
+        cache_key = f"document_summary:{document_id}"
+        cached_result = await summarization_cache.get(cache_key)
+        
+        if cached_result:
+            return cached_result  # type: ignore[no-any-return]
+        
+        # Generate summary if not cached
         pipeline: SummarizationPipeline = SummarizationPipeline(self._docs_repo, self._runs_repo)
-        result: dict[str, Any] = await pipeline.run(document_id)
+        result = await pipeline.run(document_id)
+        
+        # Cast result to dict[str, Any] - pipeline should return dict
+        result = cast(dict[str, Any], result)
+        
+        # Cache the result
+        await summarization_cache.set(cache_key, result)
+        
         return result
 
     async def summarize_meeting(self, meeting_id: int) -> dict[str, Any]:
@@ -48,6 +64,21 @@ class PipelineService:
         meeting_repo: MeetingRepositoryProtocol,
         meeting_id: int,
     ) -> dict[str, Any]:
+        # Try to get from cache first
+        cache_key = f"meeting_summary:{meeting_id}"
+        cached_result = await summarization_cache.get(cache_key)
+        
+        if cached_result:
+            return cached_result  # type: ignore[no-any-return]
+        
+        # Generate summary if not cached
         pipeline = MeetingSummarizationPipeline(meeting_repo, self._runs_repo)
-        result: dict[str, Any] = await pipeline.run(meeting_id)
+        result = await pipeline.run(meeting_id)
+        
+        # Cast result to dict[str, Any] - pipeline should return dict
+        result = cast(dict[str, Any], result)
+        
+        # Cache the result
+        await summarization_cache.set(cache_key, result)
+        
         return result
